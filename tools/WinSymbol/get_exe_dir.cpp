@@ -28,8 +28,9 @@ int main( int argc, char** argv )
 	if( false )
 	{
 		std::cout << std::uppercase << std::hex << id.Data1 << " - " << id.Data2 << " - " << id.Data3 << " -";
-		for( unsigned char c : id.Data4 )
+		for( int i = 0; i < sizeof(id.Data4)/sizeof(id.Data4[0]); i++)
 		{
+			unsigned char c = id.Data4[i];
 			std::cout << " " << std::hex << static_cast< unsigned int >( c );
 		}
 		std::cout << "; " << val1 << "; " << val2 << std::endl;
