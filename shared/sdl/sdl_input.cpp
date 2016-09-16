@@ -552,7 +552,7 @@ static void IN_InitJoystick( void )
 	if( in_joystickNo->integer < 0 || in_joystickNo->integer >= total )
 		Cvar_Set( "in_joystickNo", "0" );
 
-	in_joystickUseAnalog = Cvar_Get( "in_joystickUseAnalog", "0", CVAR_ARCHIVE );
+	in_joystickUseAnalog = Cvar_Get( "in_joystickUseAnalog", "1", CVAR_ARCHIVE );
 
 	in_joystickThreshold = Cvar_Get( "joy_threshold", "0.15", CVAR_ARCHIVE );
 
@@ -590,7 +590,7 @@ void IN_Init( void *windowData )
 	// joystick variables
 	in_keyboardDebug = Cvar_Get( "in_keyboardDebug", "0", CVAR_ARCHIVE );
 
-	in_joystick = Cvar_Get( "in_joystick", "0", CVAR_ARCHIVE|CVAR_LATCH );
+	in_joystick = Cvar_Get( "in_joystick", "1", CVAR_ARCHIVE|CVAR_LATCH );
 
 	// mouse variables
 	in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE );
@@ -1060,18 +1060,39 @@ static void IN_JoyMove( void )
 	{
 		if (in_joystickUseAnalog->integer)
 		{
+			int threshold = in_joystickThreshold->value * 32767;
+			int scale = 32767 - threshold;
+
 			if (total > MAX_JOYSTICK_AXIS) total = MAX_JOYSTICK_AXIS;
 			for (i = 0; i < total; i++)
 			{
-				Sint16 axis = SDL_JoystickGetAxis(stick, i);
-				float f = ( (float) abs(axis) ) / 32767.0f;
+				int axis = SDL_JoystickGetAxis(stick, i);
 
-				if( f < in_joystickThreshold->value ) axis = 0;
+				// rescale from deadzone
+				if( axis < -threshold )
+				{
+					axis = (axis + threshold) * 32767 / scale;
+				}
+				else if(axis > threshold )
+				{
+					axis = (axis - threshold) * 32767 / scale;
+				}
+				else axis = 0;
 
 				if ( axis != stick_state.oldaaxes[i] )
 				{
 					Sys_QueEvent( 0, SE_JOYSTICK_AXIS, i, axis, 0, NULL );
 					stick_state.oldaaxes[i] = axis;
+				}
+
+				// button presses for triggers
+				if (i >= 4)
+				{
+					if( axis < 0 ) {
+						axes |= ( 1 << ( i * 2 ) );
+					} else {
+						axes |= ( 1 << ( ( i * 2 ) + 1 ) );
+					}
 				}
 			}
 		}

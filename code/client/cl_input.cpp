@@ -473,51 +473,40 @@ CL_JoystickMove
 */
 void CL_JoystickMove( usercmd_t *cmd ) {
 	float	anglespeed;
+	const float scale = 127.f / 32767.f;
 
 	if ( !in_joystick->integer )
 	{
 		return;
 	}
 
-	if ( !(in_speed.active ^ cl_run->integer) ) {
-		cmd->buttons |= BUTTON_WALKING;
-	}
+	anglespeed = 0.001 * cls.frametime * cl.cgameSensitivity * scale;
 
-	if ( in_speed.active ) {
-		anglespeed = 0.001 * cls.frametime * cl_anglespeedkey->value;
-	} else {
-		anglespeed = 0.001 * cls.frametime;
-	}
-
-	if ( !in_strafe.active ) {
-		if ( cl_mYawOverride )
-		{
-			cl.viewangles[YAW] += 5.0f * cl_mYawOverride * cl.joystickAxis[AXIS_SIDE];
-		}
-		else
-		{
-			cl.viewangles[YAW] += anglespeed * (cl_yawspeed->value / 100.0f) * cl.joystickAxis[AXIS_SIDE];
-		}
+	if ( cl_mYawOverride )
+	{
+		cl.viewangles[YAW] += 5.0f * cl_mYawOverride * -cl.joystickAxis[AXIS_YAW] * scale;
 	}
 	else
 	{
-		cmd->rightmove = ClampChar( cmd->rightmove + cl.joystickAxis[AXIS_SIDE] );
+		cl.viewangles[YAW] += anglespeed * (cl_yawspeed->value / 100.0f) * -cl.joystickAxis[AXIS_YAW];
 	}
+	cmd->rightmove = ClampChar( cmd->rightmove + cl.joystickAxis[AXIS_SIDE] * scale );
 
-	if ( in_mlooking ) {
-		if ( cl_mPitchOverride )
-		{
-			cl.viewangles[PITCH] += 5.0f * cl_mPitchOverride * cl.joystickAxis[AXIS_FORWARD];
-		}
-		else
-		{
-			cl.viewangles[PITCH] += anglespeed * (cl_pitchspeed->value / 100.0f) * cl.joystickAxis[AXIS_FORWARD];
-		}
-	} else {
-		cmd->forwardmove = ClampChar( cmd->forwardmove + cl.joystickAxis[AXIS_FORWARD] );
+	if ( cl_mPitchOverride )
+	{
+		cl.viewangles[PITCH] += 5.0f * cl_mPitchOverride * cl.joystickAxis[AXIS_PITCH] * scale;
 	}
+	else
+	{
+		cl.viewangles[PITCH] += anglespeed * (cl_pitchspeed->value / 100.0f) * cl.joystickAxis[AXIS_PITCH];
+	}
+	cmd->forwardmove = ClampChar( cmd->forwardmove - cl.joystickAxis[AXIS_FORWARD] * scale );
 
-	cmd->upmove = ClampChar( cmd->upmove + cl.joystickAxis[AXIS_UP] );
+	// for slow movement queue visual walking animation
+	if ((cmd->rightmove * cmd->rightmove + cmd->forwardmove * cmd->forwardmove) < 64 * 64)
+	{
+		cmd->buttons |= BUTTON_WALKING;
+	}
 }
 
 /*
