@@ -468,6 +468,31 @@ void CL_JoystickEvent( int axis, int value, int time ) {
 
 /*
 =================
+CL_JoystickMouse
+=================
+*/
+void CL_JoystickMouse( void )
+{
+	// fractions that were lost in the last integer conversion
+	static float fracx = 0;
+	static float fracy = 0;
+	// compute mouse move deltas from joystick readd fractions
+	float fdx = cl.joystickAxis[AXIS_YAW] * 512/32768 * 0.001 * cls.realFrametime + fracx;
+	float fdy = cl.joystickAxis[AXIS_PITCH] * 512/32768 * 0.001 * cls.realFrametime + fracy;
+	// convert to integers
+	int dx = fdx;
+	int dy = fdy;
+	// capture the fraction for next time
+	fracx = fdx - dx;
+	fracy = fdy - dy;
+	// apply delta if there are any changes (using | is faster than ||)
+	if (dx | dy) {
+		_UI_MouseEvent( dx, dy );
+	}
+}
+
+/*
+=================
 CL_JoystickMove
 =================
 */

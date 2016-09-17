@@ -8684,7 +8684,7 @@ qboolean Item_TextScroll_HandleKey ( itemDef_t *item, int key, qboolean down, qb
 		}
 
 		// mouse hit
-		if (key == A_MOUSE1 || key == A_MOUSE2)
+		if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_JOY_RT)
 		{
 			if (item->window.flags & WINDOW_LB_LEFTARROW)
 			{
@@ -10216,7 +10216,7 @@ qboolean Item_ListBox_HandleKey(itemDef_t *item, int key, qboolean down, qboolea
 			}
 		}
 		// mouse hit
-		if (key == A_MOUSE1 || key == A_MOUSE2)
+		if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_JOY_RT)
 		{
 			if (item->window.flags & WINDOW_LB_LEFTARROW)
 			{
@@ -10603,7 +10603,7 @@ qboolean Item_YesNo_HandleKey(itemDef_t *item, int key)
 {
   if (Rect_ContainsPoint(&item->window.rect, DC->cursorx, DC->cursory) && item->window.flags & WINDOW_HASFOCUS && item->cvar)
 	{
-		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3)
+		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3 || key == A_JOY_RT)
 		{
 			DC->setCVar(item->cvar, va("%i", !DC->getCVarValue(item->cvar)));
 			return qtrue;
@@ -10698,7 +10698,7 @@ qboolean Item_Text_HandleKey(itemDef_t *item, int key)
 
 
 	{
-		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3)
+		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3 || key == A_JOY_RT)
 		{
 			if (key == A_MOUSE2)
 			{
@@ -10737,7 +10737,7 @@ qboolean Item_Multi_HandleKey(itemDef_t *item, int key)
 		if (Rect_ContainsPoint(&item->window.rect, DC->cursorx, DC->cursory) && item->window.flags & WINDOW_HASFOCUS)
 		{
 			//Raz: Scroll on multi buttons!
-			if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3 || key == A_MWHEELDOWN || key == A_MWHEELUP)
+			if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3 || key == A_MWHEELDOWN || key == A_MWHEELUP || key == A_JOY_RT)
 			//if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3)
 			{
 				if (item->cvar)
@@ -10831,7 +10831,7 @@ qboolean Item_Slider_HandleKey(itemDef_t *item, int key, qboolean down)
 	if (item->window.flags & WINDOW_HASFOCUS && item->cvar && Rect_ContainsPoint(&item->window.rect, DC->cursorx, DC->cursory))
 	{
 
-		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3)
+		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3 || key == A_JOY_RT)
 		{
 			editFieldDef_t *editDef = (editFieldDef_s *) item->typeData;
 			if (editDef)
@@ -11154,6 +11154,10 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down)
 
 
 		case A_ESCAPE:
+		case A_JOY_B:
+		case A_JOY_LT:
+		case A_JOY_LB:
+		case A_JOY_START:
 			if (!g_waitingForKey && menu->onESC)
 			{
 				itemDef_t it;
@@ -11169,6 +11173,7 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down)
 
 		case A_MOUSE1:
 		case A_MOUSE2:
+		case A_JOY_RT:
 			if (item)
 			{
 				if (item->type == ITEM_TYPE_TEXT)
@@ -11243,29 +11248,6 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down)
 			}
 			break;
 
-		case A_JOY0:
-		case A_JOY1:
-		case A_JOY2:
-		case A_JOY3:
-		case A_JOY4:
-		case A_AUX0:
-		case A_AUX1:
-		case A_AUX2:
-		case A_AUX3:
-		case A_AUX4:
-		case A_AUX5:
-		case A_AUX6:
-		case A_AUX7:
-		case A_AUX8:
-		case A_AUX9:
-		case A_AUX10:
-		case A_AUX11:
-		case A_AUX12:
-		case A_AUX13:
-		case A_AUX14:
-		case A_AUX15:
-		case A_AUX16:
-			break;
 		case A_KP_ENTER:
 		case A_ENTER:
 			if (item)

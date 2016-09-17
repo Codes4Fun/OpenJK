@@ -39,6 +39,8 @@ cvar_t *in_joystick          		= NULL;
 static cvar_t *in_joystickThreshold = NULL;
 static cvar_t *in_joystickNo        = NULL;
 static cvar_t *in_joystickUseAnalog = NULL;
+static cvar_t *in_joystickLogAxis   = NULL;
+static cvar_t *in_joystickLogButtons = NULL;
 
 static SDL_Window *SDL_window = NULL;
 
@@ -468,29 +470,75 @@ static void IN_DeactivateMouse( void )
 	}
 }
 
+#define MAX_SDL_BUTTON_MAP 15
+
+#if defined(_WIN32)
+static int sdl_button_map[MAX_SDL_BUTTON_MAP] = {
+	A_JOY_DPAD_UP,
+	A_JOY_DPAD_DOWN,
+	A_JOY_DPAD_LEFT,
+	A_JOY_DPAD_RIGHT,
+	A_JOY_START,
+	A_JOY_SELECT,
+	A_JOY_LS,
+	A_JOY_RS,
+	A_JOY_LB,
+	A_JOY_RB,
+	A_JOY_A,
+	A_JOY_B,
+	A_JOY_X,
+	A_JOY_Y,
+};
+#else
+static int sdl_button_map[MAX_SDL_BUTTON_MAP] = {
+	A_JOY_A, // A
+	A_JOY_B, // B
+	A_JOY_X, // X
+	A_JOY_Y, // Y
+	A_JOY_LB, // Left bumper
+	A_JOY_RB, // Right bumper
+	A_JOY_SELECT, // Select
+	A_JOY_START, // Start
+	A_JOY_SYSTEM, // System
+	A_JOY_LS, // Left stick
+	A_JOY_RS, // Right stick
+	A_JOY_DPAD_LEFT, // dpad left
+	A_JOY_DPAD_RIGHT, // dpad right
+	A_JOY_DPAD_UP, // dpad up
+	A_JOY_DPAD_DOWN, // dpad down
+};
+#endif
+
+#define MAX_SDL_AXIS_MAP 6
+#if defined(_WIN32)
+static int sdl_axis_map[MAX_SDL_AXIS_MAP] = { 0, 1, 2, 3, 4, 5 };
+#else
+static int sdl_axis_map[MAX_SDL_AXIS_MAP] = { 0, 1, 3, 4, 2, 5 };
+#endif
+
 // We translate axes movement into keypresses
 static int joy_keys[16] = {
 	A_CURSOR_LEFT, A_CURSOR_RIGHT,
 	A_CURSOR_UP, A_CURSOR_DOWN,
-	A_JOY16, A_JOY17,
-	A_JOY18, A_JOY19,
-	A_JOY20, A_JOY21,
-	A_JOY22, A_JOY23,
-	A_JOY24, A_JOY25,
-	A_JOY26, A_JOY27
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_LT,
+	A_JOY_31, A_JOY_RT,
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_31
 };
 
 // translate hat events into keypresses
 // the 4 highest buttons are used for the first hat ...
 static int hat_keys[16] = {
-	A_JOY28, A_JOY29,
-	A_JOY30, A_JOY31,
-	A_JOY24, A_JOY25,
-	A_JOY26, A_JOY27,
-	A_JOY20, A_JOY21,
-	A_JOY22, A_JOY23,
-	A_JOY16, A_JOY17,
-	A_JOY18, A_JOY19
+	A_JOY_DPAD_UP, A_JOY_DPAD_RIGHT, // dpad up, dpad right
+	A_JOY_DPAD_DOWN, A_JOY_DPAD_LEFT, // dpad down, dpad left
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_31,
+	A_JOY_31, A_JOY_31
 };
 
 
@@ -555,6 +603,10 @@ static void IN_InitJoystick( void )
 	in_joystickUseAnalog = Cvar_Get( "in_joystickUseAnalog", "1", CVAR_ARCHIVE );
 
 	in_joystickThreshold = Cvar_Get( "joy_threshold", "0.15", CVAR_ARCHIVE );
+
+	in_joystickLogAxis = Cvar_Get( "joy_LogAxis", "0", CVAR_ARCHIVE );
+
+	in_joystickLogButtons = Cvar_Get( "joy_LogButtons", "0", CVAR_ARCHIVE );
 
 	stick = SDL_JoystickOpen( in_joystickNo->integer );
 
@@ -954,14 +1006,32 @@ static void IN_JoyMove( void )
 	{
 		if (total > (int)ARRAY_LEN(stick_state.buttons))
 			total = ARRAY_LEN(stick_state.buttons);
+		bool changed = false;
 		for (i = 0; i < total; i++)
 		{
 			qboolean pressed = (qboolean)(SDL_JoystickGetButton(stick, i) != 0);
-			if (pressed != stick_state.buttons[i])
+
+			if (pressed == stick_state.buttons[i])
 			{
-				Sys_QueEvent( 0, SE_KEY, A_JOY1 + i, pressed, 0, NULL );
-				stick_state.buttons[i] = pressed;
+				continue;
 			}
+
+			stick_state.buttons[i] = pressed;
+			changed = true;
+
+			if (i < MAX_SDL_BUTTON_MAP)
+			{
+				Sys_QueEvent( 0, SE_KEY, sdl_button_map[i], pressed, 0, NULL );
+			}
+		}
+		if (changed && in_joystickLogButtons->integer)
+		{
+			Com_Printf( " buttons %d(%d) ", total, SDL_JoystickNumButtons(stick) );
+			for (i = 0; i < total; i++)
+			{
+				Com_Printf( " %d", SDL_JoystickGetButton(stick, i) );
+			}
+			Com_Printf( "\n" );
 		}
 	}
 
@@ -979,7 +1049,9 @@ static void IN_JoyMove( void )
 	// update hat state
 	if (hats != stick_state.oldhats)
 	{
+		if (in_joystickLogButtons->integer) Com_Printf( " hats " );
 		for( i = 0; i < 4; i++ ) {
+			if (in_joystickLogButtons->integer) Com_Printf( " %d", ((Uint8 *)&hats)[i] );
 			if( ((Uint8 *)&hats)[i] != ((Uint8 *)&stick_state.oldhats)[i] ) {
 				// release event
 				switch( ((Uint8 *)&stick_state.oldhats)[i] ) {
@@ -1049,6 +1121,7 @@ static void IN_JoyMove( void )
 				}
 			}
 		}
+		if (in_joystickLogButtons->integer) Com_Printf( "\n" );
 	}
 
 	// save hat state
@@ -1058,6 +1131,7 @@ static void IN_JoyMove( void )
 	total = SDL_JoystickNumAxes(stick);
 	if (total > 0)
 	{
+		if (in_joystickLogAxis->integer) Com_Printf("joystick ");
 		if (in_joystickUseAnalog->integer)
 		{
 			int threshold = in_joystickThreshold->value * 32767;
@@ -1066,7 +1140,8 @@ static void IN_JoyMove( void )
 			if (total > MAX_JOYSTICK_AXIS) total = MAX_JOYSTICK_AXIS;
 			for (i = 0; i < total; i++)
 			{
-				int axis = SDL_JoystickGetAxis(stick, i);
+				int axis = SDL_JoystickGetAxis(stick, sdl_axis_map[i]);
+				if (in_joystickLogAxis->integer) Com_Printf(" %f", axis/32767.f);
 
 				// rescale from deadzone
 				if( axis < -threshold )
@@ -1110,6 +1185,7 @@ static void IN_JoyMove( void )
 				}
 			}
 		}
+		if (in_joystickLogAxis->integer) Com_Printf("\n");
 	}
 
 	/* Time to update axes state based on old vs. new. */

@@ -1003,17 +1003,17 @@ void Com_ExecuteCfg(void)
 	Cbuf_Execute(); // Always execute after exec to prevent text buffer overflowing
 
 	// default gamepad controls
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY1\" \"forcenext\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY2\" \"forceprev\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY3\" \"weapprev\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY4\" \"weapnext\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY10\" \"+attack\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY11\" \"+moveup\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY12\" \"+movedown\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY13\" \"+use\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY14\" \"saberAttackCycle\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY21\" \"+useforce\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY23\" \"+altattack\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_A\" \"+moveup\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_B\" \"+movedown\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_X\" \"+use\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_Y\" \"saberAttackCycle\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_LT\" \"+useforce\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_RT\" \"+altattack\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_UP\" \"forcenext\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_DOWN\" \"forceprev\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_LEFT\" \"weapprev\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_RIGHT\" \"weapnext\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_RB\" \"+attack\"\n");
 
 	if(!Com_SafeMode())
 	{

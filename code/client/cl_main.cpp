@@ -826,6 +826,10 @@ void CL_Frame ( int msec,float fractionMsec ) {
 		SCR_DebugGraph ( cls.realFrametime * 0.25, 0 );
 	}
 
+	if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
+		CL_JoystickMouse();
+	}
+
 	// see if we need to update any userinfo
 	CL_CheckUserinfo();
 
