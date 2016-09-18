@@ -4363,29 +4363,6 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 			}
 			break;
 
-		case A_JOY0:
-		case A_JOY1:
-		case A_JOY2:
-		case A_JOY3:
-		case A_JOY4:
-		case A_AUX0:
-		case A_AUX1:
-		case A_AUX2:
-		case A_AUX3:
-		case A_AUX4:
-		case A_AUX5:
-		case A_AUX6:
-		case A_AUX7:
-		case A_AUX8:
-		case A_AUX9:
-		case A_AUX10:
-		case A_AUX11:
-		case A_AUX12:
-		case A_AUX13:
-		case A_AUX14:
-		case A_AUX15:
-		case A_AUX16:
-			break;
 		case A_KP_ENTER:
 		case A_ENTER:
 			if (item) {

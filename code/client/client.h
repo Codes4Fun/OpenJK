@@ -258,6 +258,7 @@ extern	cvar_t	*cl_yawspeed;
 extern	cvar_t	*cl_pitchspeed;
 extern	cvar_t	*cl_run;
 extern	cvar_t	*cl_anglespeedkey;
+extern	cvar_t	*cl_joy_mouse;
 
 extern	cvar_t	*cl_sensitivity;
 extern	cvar_t	*cl_freelook;

@@ -1057,6 +1057,18 @@ void Com_ExecuteCfg(void)
 	Cbuf_ExecuteText(EXEC_NOW, "exec mpdefault.cfg\n");
 	Cbuf_Execute(); // Always execute after exec to prevent text buffer overflowing
 
+	// default gamepad controls
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_A\" \"+moveup\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_B\" \"+movedown\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_X\" \"+use\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_Y\" \"saberAttackCycle\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_UP\" \"forcenext\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_DOWN\" \"forceprev\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_LEFT\" \"weapprev\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_RIGHT\" \"weapnext\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_RB\" \"+useforce\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_LB\" \"+useforce\"\n");
+
 	if(!Com_SafeMode())
 	{
 		// skip the q3config.cfg and autoexec.cfg if "safe" is on the command line

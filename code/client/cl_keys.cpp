@@ -1249,7 +1249,7 @@ void CL_KeyDownEvent( int key, unsigned time )
 	}
 
 	// escape is always handled special
-	if ( key == A_ESCAPE || key == A_JOY_START ) {
+	if ( key == A_ESCAPE ) {
 		if ( !kg.keys[A_SHIFT].down && ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
 			Con_ToggleConsole_f ();
 			Key_ClearStates ();

@@ -826,9 +826,7 @@ void CL_Frame ( int msec,float fractionMsec ) {
 		SCR_DebugGraph ( cls.realFrametime * 0.25, 0 );
 	}
 
-	if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
-		CL_JoystickMouse();
-	}
+	CL_JoystickMouse();
 
 	// see if we need to update any userinfo
 	CL_CheckUserinfo();
@@ -1250,6 +1248,8 @@ void CL_Init( void ) {
 	cl_yawspeed = Cvar_Get ("cl_yawspeed", "140", CVAR_ARCHIVE);
 	cl_pitchspeed = Cvar_Get ("cl_pitchspeed", "140", CVAR_ARCHIVE);
 	cl_anglespeedkey = Cvar_Get ("cl_anglespeedkey", "1.5", CVAR_ARCHIVE);
+
+	cl_joy_mouse = Cvar_Get ("cl_joy_mouse", "1", CVAR_ARCHIVE);
 
 	cl_packetdup = Cvar_Get ("cl_packetdup", "1", CVAR_ARCHIVE );
 

@@ -76,6 +76,8 @@ kbutton_t	in_buttons[MAX_KBUTTONS];
 
 qboolean	in_mlooking;
 
+extern cvar_t	*in_joystick;
+
 void IN_Button11Down(void);
 void IN_Button11Up(void);
 void IN_Button10Down(void);
@@ -810,6 +812,8 @@ cvar_t	*cl_run;
 
 cvar_t	*cl_anglespeedkey;
 
+cvar_t	*cl_joy_mouse;
+
 
 /*
 ================
@@ -959,72 +963,103 @@ void CL_JoystickEvent( int axis, int value, int time ) {
 
 /*
 =================
+CL_JoystickMouse
+=================
+*/
+void CL_JoystickMouse( void )
+{
+	if (!cl_joy_mouse->integer && !(Key_GetCatcher( ) & KEYCATCH_UI) ) {
+		return;
+	}
+	// scale by time and scale down to original input of -127 to 127.
+	float scale =  cls.realFrametime * 0.001 * 127.f/32767.f;
+	// scale based upon joystick settings, and counter mouse scaling.
+	float scalex = scale * (cl_yawspeed->value / 100.0f);
+	float scaley = scale * (cl_pitchspeed->value / 100.0f);
+	// counteract mouse scale settings
+	scalex /= m_yaw->value * cl_sensitivity->value;
+	scaley /= m_pitch->value * cl_sensitivity->value;
+	// fractions that were lost in the last integer conversion
+	static float fracx = 0;
+	static float fracy = 0;
+	// compute mouse move deltas from joystick applying previous fractions
+	float fdx = cl.joystickAxis[AXIS_YAW] * scalex + fracx;
+	float fdy = cl.joystickAxis[AXIS_PITCH] * scaley + fracy;
+	// convert to integers
+	int dx = fdx;
+	int dy = fdy;
+	// capture the fraction for next time
+	fracx = fdx - dx;
+	fracy = fdy - dy;
+	// apply delta if there are any changes (using | is faster than ||)
+	if (dx | dy) {
+		if (g_clAutoMapMode && cls.cgameStarted)
+		{ //automap input
+			autoMapInput_t *data = (autoMapInput_t *)cl.mSharedMemory;
+
+			g_clAutoMapInput.yaw = dx;
+			g_clAutoMapInput.pitch = dy;
+			memcpy(data, &g_clAutoMapInput, sizeof(autoMapInput_t));
+			CGVM_AutomapInput();
+
+			g_clAutoMapInput.yaw = 0.0f;
+			g_clAutoMapInput.pitch = 0.0f;
+		}
+		else if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
+			UIVM_MouseEvent( dx, dy );
+		} else if ( Key_GetCatcher( ) & KEYCATCH_CGAME ) {
+			CGVM_MouseEvent( dx, dy );
+		} else {
+			cl.mouseDx[cl.mouseIndex] += dx;
+			cl.mouseDy[cl.mouseIndex] += dy;
+		}
+	}
+}
+
+/*
+=================
 CL_JoystickMove
 =================
 */
-extern cvar_t *in_joystick;
 void CL_JoystickMove( usercmd_t *cmd ) {
 	float	anglespeed;
+	const float scale = 127.f / 32767.f;
 
 	if ( !in_joystick->integer )
 	{
 		return;
 	}
 
-	if ( !(in_speed.active ^ cl_run->integer) ) {
-		cmd->buttons |= BUTTON_WALKING;
-	}
+	anglespeed = 0.001 * cls.frametime * cl.cgameSensitivity * scale;
 
-	if ( in_speed.active ) {
-		anglespeed = 0.001 * cls.frametime * cl_anglespeedkey->value;
-	} else {
-		anglespeed = 0.001 * cls.frametime;
-	}
-
-	if ( !in_strafe.active ) {
+	if (!cl_joy_mouse->integer && !(Key_GetCatcher( ) & KEYCATCH_UI) ) {
 		if ( cl_mYawOverride )
 		{
-			if ( cl_mSensitivityOverride )
-			{
-				cl.viewangles[YAW] += cl_mYawOverride * cl_mSensitivityOverride * cl.joystickAxis[AXIS_SIDE]/2.0f;
-			}
-			else
-			{
-				cl.viewangles[YAW] += cl_mYawOverride * OVERRIDE_MOUSE_SENSITIVITY * cl.joystickAxis[AXIS_SIDE]/2.0f;
-			}
+			cl.viewangles[YAW] += 5.0f * cl_mYawOverride * -cl.joystickAxis[AXIS_YAW] * scale;
 		}
 		else
 		{
-			cl.viewangles[YAW] += anglespeed * (cl_yawspeed->value / 100.0f) * cl.joystickAxis[AXIS_SIDE];
+			cl.viewangles[YAW] += anglespeed * (cl_yawspeed->value / 100.0f) * -cl.joystickAxis[AXIS_YAW];
 		}
-	}
-	else
-	{
-		cmd->rightmove = ClampChar( cmd->rightmove + cl.joystickAxis[AXIS_SIDE] );
-	}
 
-	if ( in_mlooking || cl_freelook->integer ) {
 		if ( cl_mPitchOverride )
 		{
-			if ( cl_mSensitivityOverride )
-			{
-				cl.viewangles[PITCH] += cl_mPitchOverride * cl_mSensitivityOverride * cl.joystickAxis[AXIS_FORWARD]/2.0f;
-			}
-			else
-			{
-				cl.viewangles[PITCH] += cl_mPitchOverride * OVERRIDE_MOUSE_SENSITIVITY * cl.joystickAxis[AXIS_FORWARD]/2.0f;
-			}
+			cl.viewangles[PITCH] += 5.0f * cl_mPitchOverride * cl.joystickAxis[AXIS_PITCH] * scale;
 		}
 		else
 		{
-			cl.viewangles[PITCH] += anglespeed * (cl_pitchspeed->value / 100.0f) * cl.joystickAxis[AXIS_FORWARD];
+			cl.viewangles[PITCH] += anglespeed * (cl_pitchspeed->value / 100.0f) * cl.joystickAxis[AXIS_PITCH];
 		}
-	} else
-	{
-		cmd->forwardmove = ClampChar( cmd->forwardmove + cl.joystickAxis[AXIS_FORWARD] );
 	}
 
-	cmd->upmove = ClampChar( cmd->upmove + cl.joystickAxis[AXIS_UP] );
+	cmd->rightmove = ClampChar( cmd->rightmove + cl.joystickAxis[AXIS_SIDE] * scale );
+	cmd->forwardmove = ClampChar( cmd->forwardmove - cl.joystickAxis[AXIS_FORWARD] * scale );
+
+	// for slow movement queue visual walking animation
+	if ((cmd->rightmove * cmd->rightmove + cmd->forwardmove * cmd->forwardmove) < 64 * 64)
+	{
+		cmd->buttons |= BUTTON_WALKING;
+	}
 }
 
 /*

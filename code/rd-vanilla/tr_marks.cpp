@@ -284,6 +284,8 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	for ( i = 0 ; i < numPoints ; i++ ) {
 		vec3_t	temp;
 
+		assert( !Q_isnan(points[i][0]) && !Q_isnan(points[i][1]) && !Q_isnan(points[i][2]) );
+
 		AddPointToBounds( points[i], mins, maxs );
 		VectorAdd( points[i], projection, temp );
 		AddPointToBounds( temp, mins, maxs );

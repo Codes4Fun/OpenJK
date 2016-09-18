@@ -1007,13 +1007,12 @@ void Com_ExecuteCfg(void)
 	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_B\" \"+movedown\"\n");
 	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_X\" \"+use\"\n");
 	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_Y\" \"saberAttackCycle\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_LT\" \"+useforce\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_RT\" \"+altattack\"\n");
 	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_UP\" \"forcenext\"\n");
 	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_DOWN\" \"forceprev\"\n");
 	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_LEFT\" \"weapprev\"\n");
 	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_DPAD_RIGHT\" \"weapnext\"\n");
-	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_RB\" \"+attack\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_RB\" \"+useforce\"\n");
+	Cbuf_ExecuteText(EXEC_NOW, "bind \"JOY_LB\" \"+useforce\"\n");
 
 	if(!Com_SafeMode())
 	{

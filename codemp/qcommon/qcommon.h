@@ -931,6 +931,8 @@ void CL_JoystickEvent( int axis, int value, int time );
 
 void CL_PacketEvent( netadr_t from, msg_t *msg );
 
+void CL_JoystickMouse( void );
+
 void CL_ConsolePrint( const char *text );
 
 void CL_MapLoading( void );

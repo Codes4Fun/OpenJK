@@ -478,7 +478,7 @@ static int sdl_button_map[MAX_SDL_BUTTON_MAP] = {
 	A_JOY_DPAD_DOWN,
 	A_JOY_DPAD_LEFT,
 	A_JOY_DPAD_RIGHT,
-	A_JOY_START,
+	A_ESCAPE,
 	A_JOY_SELECT,
 	A_JOY_LS,
 	A_JOY_RS,
@@ -491,21 +491,21 @@ static int sdl_button_map[MAX_SDL_BUTTON_MAP] = {
 };
 #else
 static int sdl_button_map[MAX_SDL_BUTTON_MAP] = {
-	A_JOY_A, // A
-	A_JOY_B, // B
-	A_JOY_X, // X
-	A_JOY_Y, // Y
-	A_JOY_LB, // Left bumper
-	A_JOY_RB, // Right bumper
-	A_JOY_SELECT, // Select
-	A_JOY_START, // Start
-	A_JOY_SYSTEM, // System
-	A_JOY_LS, // Left stick
-	A_JOY_RS, // Right stick
-	A_JOY_DPAD_LEFT, // dpad left
-	A_JOY_DPAD_RIGHT, // dpad right
-	A_JOY_DPAD_UP, // dpad up
-	A_JOY_DPAD_DOWN, // dpad down
+	A_JOY_A,
+	A_JOY_B,
+	A_JOY_X,
+	A_JOY_Y,
+	A_JOY_LB,
+	A_JOY_RB,
+	A_JOY_SELECT,
+	A_ESCAPE,
+	A_JOY_SYSTEM,
+	A_JOY_LS,
+	A_JOY_RS,
+	A_JOY_DPAD_LEFT,
+	A_JOY_DPAD_RIGHT,
+	A_JOY_DPAD_UP,
+	A_JOY_DPAD_DOWN,
 };
 #endif
 
@@ -522,8 +522,8 @@ static int joy_keys[16] = {
 	A_CURSOR_UP, A_CURSOR_DOWN,
 	A_JOY_31, A_JOY_31,
 	A_JOY_31, A_JOY_31,
-	A_JOY_31, A_JOY_LT,
-	A_JOY_31, A_JOY_RT,
+	A_JOY_31, A_MOUSE2,
+	A_JOY_31, A_MOUSE1,
 	A_JOY_31, A_JOY_31,
 	A_JOY_31, A_JOY_31
 };
