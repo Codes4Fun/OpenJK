@@ -168,6 +168,7 @@ char *Cvar_VariableString( const char *var_name ) {
 Cvar_VariableStringBuffer
 ============
 */
+void R_UI_ModeReset();
 void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize ) {
 	cvar_t *var;
 
@@ -176,6 +177,12 @@ void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize 
 		*buffer = 0;
 	}
 	else {
+#ifndef DEDICATED
+		if (var->flags & CVAR_R_MODE_HACK)
+		{
+			R_UI_ModeReset();
+		}
+#endif
 		Q_strncpyz( buffer, var->string, bufsize );
 	}
 }
@@ -509,6 +516,7 @@ void Cvar_Print( cvar_t *v ) {
 Cvar_Set2
 ============
 */
+void R_UI_SetMode();
 cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 	cvar_t	*var;
 
@@ -538,6 +546,13 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 			return Cvar_Get (var_name, value, 0);
 		}
 	}
+
+#ifndef DEDICATED
+	if (var->flags & CVAR_R_MODE_HACK)
+	{
+		R_UI_SetMode();
+	}
+#endif
 
 	if (!value ) {
 		value = var->resetString;

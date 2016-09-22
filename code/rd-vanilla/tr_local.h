@@ -1139,7 +1139,7 @@ extern cvar_t	*r_windPointForce;
 extern cvar_t	*r_windPointX;
 extern cvar_t	*r_windPointY;
 
-extern cvar_t	*r_mode;				// video mode
+extern cvar_t	*r_video_mode;			// video mode
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_noborder;			// disable border in windowed mode
 extern cvar_t	*r_centerWindow;		// override vid_x/ypos and center the window

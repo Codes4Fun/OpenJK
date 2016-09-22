@@ -50,7 +50,7 @@ cvar_t	*r_customwidth;
 cvar_t	*r_customheight;
 cvar_t	*r_swapInterval;
 cvar_t	*r_stereo;
-cvar_t	*r_mode;
+cvar_t	*r_video_mode;
 cvar_t	*r_displayRefresh;
 
 // Window surface cvars
@@ -60,34 +60,93 @@ cvar_t	*r_colorbits;
 cvar_t	*r_ignorehwgamma;
 cvar_t  *r_ext_multisample;
 
-/*
-** R_GetModeInfo
-*/
 typedef struct vidmode_s
 {
+	uint32_t hash;
     const char *description;
     int         width, height;
 } vidmode_t;
 
-const vidmode_t r_vidModes[] = {
-    { "Mode  0: 320x240",		320,	240 },
-    { "Mode  1: 400x300",		400,	300 },
-    { "Mode  2: 512x384",		512,	384 },
-    { "Mode  3: 640x480",		640,	480 },
-    { "Mode  4: 800x600",		800,	600 },
-    { "Mode  5: 960x720",		960,	720 },
-    { "Mode  6: 1024x768",		1024,	768 },
-    { "Mode  7: 1152x864",		1152,	864 },
-    { "Mode  8: 1280x1024",		1280,	1024 },
-    { "Mode  9: 1600x1200",		1600,	1200 },
-    { "Mode 10: 2048x1536",		2048,	1536 },
-    { "Mode 11: 856x480 (wide)", 856,	 480 },
-    { "Mode 12: 2400x600(surround)",2400,600 }
-};
-static const int	s_numVidModes = ARRAY_LEN( r_vidModes );
+vidmode_t * r_vidModes = NULL;
+int s_numVidModes = 0;
+#define R_MODE_FALLBACK (0) // Desktop
 
-#define R_MODE_FALLBACK (4) // 640x480
+static void R_AddVidMode( int width, int height )
+{
+	assert(width < 65536 && height < 65536);
+	uint32_t hash = width << 16 | height;
+	for (int i = 0; i < s_numVidModes; i++)
+	{
+		if (hash == r_vidModes[i].hash)
+		{
+			return;
+		}
+	}
+	s_numVidModes++;
+	r_vidModes = (vidmode_t*)realloc(r_vidModes, s_numVidModes * sizeof(vidmode_t));
+	vidmode_t &vm = r_vidModes[s_numVidModes-1];
+	vm.hash = hash;
+	vm.description = NULL;
+	vm.width = width;
+	vm.height = height;
+}
 
+/*
+** R_InitModeList
+*/
+static int R_InitModeList( void )
+{
+	int display = 0;
+	int sdl_mode_count = SDL_GetNumDisplayModes(display);
+	if (sdl_mode_count < 1)
+	{
+		return 0;
+	}
+
+	SDL_DisplayMode desktopMode;
+	if( SDL_GetDesktopDisplayMode( display, &desktopMode ) < 0 )
+	{
+		return 0;
+	}
+
+	if (r_vidModes)
+	{
+		free(r_vidModes);
+		r_vidModes = NULL;
+		s_numVidModes = 0;
+	}
+
+	R_AddVidMode(desktopMode.w, desktopMode.h);
+	r_vidModes[0].hash = 0;
+	r_vidModes[0].description = "Desktop";
+
+	SDL_DisplayMode sdlmode;
+	for (int mode_index = 0; mode_index < sdl_mode_count; mode_index++)
+	{
+		if (SDL_GetDisplayMode(display, mode_index, &sdlmode) != 0)
+		{
+			continue;
+		}
+
+		if( !sdlmode.w || !sdlmode.h )
+		{
+			continue;
+		}
+
+		int bits = SDL_BITSPERPIXEL(sdlmode.format);
+		if (bits != 24 && bits != 16)
+		{
+			continue;
+		}
+
+		R_AddVidMode(sdlmode.w, sdlmode.h);
+	}
+	return s_numVidModes;
+}
+
+/*
+** R_GetModeInfo
+*/
 qboolean R_GetModeInfo( int *width, int *height, int mode ) {
 	const vidmode_t	*vm;
 
@@ -112,6 +171,24 @@ qboolean R_GetModeInfo( int *width, int *height, int mode ) {
     return qtrue;
 }
 
+const char * R_GetModeDescription( int mode ) {
+	if ( mode < 0 || mode >= s_numVidModes )
+	{
+		return "mode out of range";
+	}
+
+	vidmode_t &m = r_vidModes[mode];
+
+	if (!m.description)
+	{
+		char temp[512];
+		Com_sprintf(temp, sizeof(temp), "%d x %d", m.width, m.height);
+		m.description = strdup(temp);
+	}
+
+	return m.description;
+}
+
 /*
 ** R_ModeList_f
 */
@@ -120,13 +197,52 @@ static void R_ModeList_f( void )
 	int i;
 
 	Com_Printf( "\n" );
-	Com_Printf( "Mode -2: Use desktop resolution\n" );
 	Com_Printf( "Mode -1: Use r_customWidth and r_customHeight variables\n" );
 	for ( i = 0; i < s_numVidModes; i++ )
 	{
-		Com_Printf( "%s\n", r_vidModes[i].description );
+		Com_Printf( "Mode %3d: %s\n", i, R_GetModeDescription(i) );
 	}
 	Com_Printf( "\n" );
+}
+
+int r_ui_video_mode = 0;
+int r_ui_menu_mode = -1;
+
+const char * R_UI_GetMode(int menu_mode)
+{
+	if (r_ui_menu_mode != menu_mode && r_ui_menu_mode != -1)
+	{
+		if (((menu_mode - r_ui_menu_mode)&0x3) == 1)
+		{
+			// increment
+			r_ui_video_mode = (r_ui_video_mode + 1) % s_numVidModes;
+		}
+		else
+		{
+			// decrement
+			if (r_ui_video_mode == 0)
+			{
+				r_ui_video_mode = s_numVidModes - 1;
+			}
+			else
+			{
+				r_ui_video_mode = r_ui_video_mode - 1;
+			}
+		}
+	}
+	r_ui_menu_mode = menu_mode;
+	return R_GetModeDescription(r_ui_video_mode);
+}
+
+void R_UI_ModeReset()
+{
+	r_ui_video_mode = r_video_mode->integer;
+	r_ui_menu_mode = -1;
+}
+
+void R_UI_SetMode()
+{
+	Cvar_SetValue("r_video_mode", r_ui_video_mode);
 }
 
 /*
@@ -189,118 +305,6 @@ void WIN_Present( window_t *window )
 
 		r_fullscreen->modified = qfalse;
 	}
-}
-
-/*
-===============
-GLimp_CompareModes
-===============
-*/
-static int GLimp_CompareModes( const void *a, const void *b )
-{
-	const float ASPECT_EPSILON = 0.001f;
-	SDL_Rect *modeA = (SDL_Rect *)a;
-	SDL_Rect *modeB = (SDL_Rect *)b;
-	float aspectA = (float)modeA->w / (float)modeA->h;
-	float aspectB = (float)modeB->w / (float)modeB->h;
-	int areaA = modeA->w * modeA->h;
-	int areaB = modeB->w * modeB->h;
-	float aspectDiffA = fabs( aspectA - displayAspect );
-	float aspectDiffB = fabs( aspectB - displayAspect );
-	float aspectDiffsDiff = aspectDiffA - aspectDiffB;
-
-	if( aspectDiffsDiff > ASPECT_EPSILON )
-		return 1;
-	else if( aspectDiffsDiff < -ASPECT_EPSILON )
-		return -1;
-	else
-		return areaA - areaB;
-}
-
-/*
-===============
-GLimp_DetectAvailableModes
-===============
-*/
-static bool GLimp_DetectAvailableModes(void)
-{
-	int i, j;
-	char buf[ MAX_STRING_CHARS ] = { 0 };
-	SDL_Rect *modes;
-	int numModes = 0;
-
-	int display = SDL_GetWindowDisplayIndex( screen );
-	SDL_DisplayMode windowMode;
-
-	if( SDL_GetWindowDisplayMode( screen, &windowMode ) < 0 )
-	{
-		Com_Printf( "Couldn't get window display mode, no resolutions detected (%s).\n", SDL_GetError() );
-		return false;
-	}
-
-	int numDisplayModes = SDL_GetNumDisplayModes( display );
-	if ( numDisplayModes < 0 )
-		Com_Error( ERR_FATAL, "SDL_GetNumDisplayModes() FAILED (%s)", SDL_GetError() );
-
-	modes = (SDL_Rect *)SDL_calloc( (size_t)numDisplayModes, sizeof( SDL_Rect ) );
-	if ( !modes )
-		Com_Error( ERR_FATAL, "Out of memory" );
-
-	for( i = 0; i < numDisplayModes; i++ )
-	{
-		SDL_DisplayMode mode;
-
-		if( SDL_GetDisplayMode( display, i, &mode ) < 0 )
-			continue;
-
-		if( !mode.w || !mode.h )
-		{
-			Com_Printf( "Display supports any resolution\n" );
-			SDL_free( modes );
-			return true;
-		}
-
-		if( windowMode.format != mode.format )
-			continue;
-
-		// SDL can give the same resolution with different refresh rates.
-		// Only list resolution once.
-		for( j = 0; j < numModes; j++ )
-		{
-			if( mode.w == modes[ j ].w && mode.h == modes[ j ].h )
-				break;
-		}
-
-		if( j != numModes )
-			continue;
-
-		modes[ numModes ].w = mode.w;
-		modes[ numModes ].h = mode.h;
-		numModes++;
-	}
-
-	if( numModes > 1 )
-		qsort( modes, numModes, sizeof( SDL_Rect ), GLimp_CompareModes );
-
-	for( i = 0; i < numModes; i++ )
-	{
-		const char *newModeString = va( "%ux%u ", modes[ i ].w, modes[ i ].h );
-
-		if( strlen( newModeString ) < (int)sizeof( buf ) - strlen( buf ) )
-			Q_strcat( buf, sizeof( buf ), newModeString );
-		else
-			Com_Printf( "Skipping mode %ux%u, buffer too small\n", modes[ i ].w, modes[ i ].h );
-	}
-
-	if( *buf )
-	{
-		buf[ strlen( buf ) - 1 ] = 0;
-		Com_Printf( "Available modes: '%s'\n", buf );
-		Cvar_Set( "r_availableModes", buf );
-	}
-
-	SDL_free( modes );
-	return true;
 }
 
 /*
@@ -639,11 +643,6 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 
 	SDL_FreeSurface( icon );
 
-	if (!GLimp_DetectAvailableModes())
-	{
-		return RSERR_UNKNOWN;
-	}
-
 	return RSERR_OK;
 }
 
@@ -682,6 +681,8 @@ static qboolean GLimp_StartDriverAndSetMode(glconfig_t *glConfig, const windowDe
 	{
 		Com_Error( ERR_FATAL, "SDL_GetNumVideoDisplays() FAILED (%s)", SDL_GetError() );
 	}
+
+	R_InitModeList();
 
 	if (fullscreen && Cvar_VariableIntegerValue( "in_nograb" ) )
 	{
@@ -726,7 +727,9 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 	r_customheight		= Cvar_Get( "r_customheight",		"1024",		CVAR_ARCHIVE|CVAR_LATCH );
 	r_swapInterval		= Cvar_Get( "r_swapInterval",		"0",		CVAR_ARCHIVE );
 	r_stereo			= Cvar_Get( "r_stereo",				"0",		CVAR_ARCHIVE|CVAR_LATCH );
-	r_mode				= Cvar_Get( "r_mode",				"4",		CVAR_ARCHIVE|CVAR_LATCH );
+	r_video_mode		= Cvar_Get( "r_video_mode",			"0",		CVAR_ARCHIVE|CVAR_LATCH );
+	cvar_t * r_mode		= Cvar_Get( "r_mode",				"4",		CVAR_ARCHIVE|CVAR_LATCH|CVAR_R_MODE_HACK );
+	
 	r_displayRefresh	= Cvar_Get( "r_displayRefresh",		"0",		CVAR_LATCH );
 	Cvar_CheckRange( r_displayRefresh, 0, 240, qtrue );
 
@@ -738,12 +741,12 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 	r_ext_multisample	= Cvar_Get( "r_ext_multisample",	"0",		CVAR_ARCHIVE|CVAR_LATCH );
 
 	// Create the window and set up the context
-	if(!GLimp_StartDriverAndSetMode( glConfig, windowDesc, r_mode->integer,
+	if(!GLimp_StartDriverAndSetMode( glConfig, windowDesc, r_video_mode->integer,
 										(qboolean)r_fullscreen->integer, (qboolean)r_noborder->integer ))
 	{
-		if( r_mode->integer != R_MODE_FALLBACK )
+		if( r_video_mode->integer != R_MODE_FALLBACK )
 		{
-			Com_Printf( "Setting r_mode %d failed, falling back on r_mode %d\n", r_mode->integer, R_MODE_FALLBACK );
+			Com_Printf( "Setting r_video_mode %d failed, falling back on r_video_mode %d\n", r_video_mode->integer, R_MODE_FALLBACK );
 
 			if (!GLimp_StartDriverAndSetMode( glConfig, windowDesc, R_MODE_FALLBACK, qfalse, qfalse ))
 			{
@@ -755,8 +758,6 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 
 	glConfig->deviceSupportsGamma =
 		(qboolean)(!r_ignorehwgamma->integer && SDL_SetWindowBrightness( screen, 1.0f ) >= 0);
-
-	Cvar_Get( "r_availableModes", "", CVAR_ROM );
 
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	IN_Init( screen );

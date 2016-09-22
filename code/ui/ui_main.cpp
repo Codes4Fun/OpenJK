@@ -4118,6 +4118,7 @@ Retrieves the current actual video settings into the temporary user
 interface versions of the cvars.
 =================
 */
+void R_UI_ModeReset();
 void UI_GetVideoSetup ( void )
 {
 	Cvar_Register ( NULL, "ui_r_glCustom",				"4", CVAR_ARCHIVE );
@@ -4141,6 +4142,9 @@ void UI_GetVideoSetup ( void )
 	Cvar_Register ( NULL, "ui_r_modified",				"0", CVAR_ROM );
 
 	// Copy over the real video cvars into their temporary counterparts
+#ifndef _UI
+	R_UI_ModeReset();
+#endif
 	Cvar_Set ( "ui_r_mode", Cvar_VariableString ( "r_mode" ) );
 	Cvar_Set ( "ui_r_colorbits", Cvar_VariableString ( "r_colorbits" ) );
 	Cvar_Set ( "ui_r_fullscreen", Cvar_VariableString ( "r_fullscreen" ) );

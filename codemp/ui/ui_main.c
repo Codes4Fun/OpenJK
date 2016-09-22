@@ -4904,6 +4904,7 @@ Retrieves the current actual video settings into the temporary user
 interface versions of the cvars.
 =================
 */
+void R_UI_ModeReset();
 void UI_GetVideoSetup ( void )
 {
 	trap->Cvar_Register ( NULL, "ui_r_glCustom",				"4", CVAR_INTERNAL|CVAR_ARCHIVE );
@@ -4927,6 +4928,9 @@ void UI_GetVideoSetup ( void )
 	trap->Cvar_Register ( NULL, "ui_r_modified",				"0", CVAR_ROM|CVAR_INTERNAL );
 
 	// Copy over the real video cvars into their temporary counterparts
+#ifndef _UI
+	R_UI_ModeReset();
+#endif
 	trap->Cvar_Set ( "ui_r_mode",						UI_Cvar_VariableString ( "r_mode" ) );
 	trap->Cvar_Set ( "ui_r_colorbits",				UI_Cvar_VariableString ( "r_colorbits" ) );
 	trap->Cvar_Set ( "ui_r_fullscreen",				UI_Cvar_VariableString ( "r_fullscreen" ) );

@@ -994,6 +994,7 @@ const char *SE_GetString( const char *psPackageReference, const char *psStringRe
 	return SE_GetString( Q_strupr(sReference) );
 }
 
+const char * R_UI_GetMode(int mode);
 
 const char *SE_GetString( const char *psPackageAndStringReference )
 {
@@ -1006,6 +1007,34 @@ const char *SE_GetString( const char *psPackageAndStringReference )
 	assert(strlen(psPackageAndStringReference) < sizeof(sReference) );
 	Q_strncpyz(sReference, psPackageAndStringReference, sizeof(sReference) );
 	Q_strupr(sReference);
+
+#ifndef DEDICATED
+	if (*(uint32_t*)sReference == 0x554e454d)
+	{
+		int mode = 7;
+		switch(((uint32_t*)sReference)[1])
+		{
+		case 0x34365f53: // MENUS_640_X_480
+			mode--;
+		case 0x30385f53: // MENUS_800_X_600
+			mode--;
+		case 0x30315f53: // MENUS_1024_X_768
+			mode--;
+		case 0x31315f53: // MENUS_1152_X_864
+			mode--;
+		case 0x32315f53: // MENUS_1280_X_1024
+			mode--;
+		case 0x36315f53: // MENUS_1600_X_1200
+			mode--;
+		case 0x30325f53: // MENUS_2048_X_1536
+			mode--;
+		case 0x34325f53: // MENUS_2400_X_600
+			return R_UI_GetMode(mode);
+		default:
+			break;
+		}
+	}
+#endif
 
 	mapStringEntries_t::iterator itEntry = TheStringPackage.m_StringEntries.find( sReference );
 	if (itEntry != TheStringPackage.m_StringEntries.end())

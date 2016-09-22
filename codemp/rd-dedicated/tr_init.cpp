@@ -121,7 +121,6 @@ cvar_t	*r_uiFullScreen;
 cvar_t	*r_shadows;
 cvar_t	*r_shadowRange;
 cvar_t	*r_flares;
-cvar_t	*r_mode;
 cvar_t	*r_nobind;
 cvar_t	*r_singleShader;
 cvar_t	*r_colorMipLevels;
@@ -341,7 +340,7 @@ void R_Register( void )
 	r_depthbits							= ri->Cvar_Get( "r_depthbits",						"0",						CVAR_ARCHIVE|CVAR_LATCH );
 	r_overBrightBits					= ri->Cvar_Get( "r_overBrightBits",					"0",						CVAR_ARCHIVE|CVAR_LATCH );
 	r_ignorehwgamma						= ri->Cvar_Get( "r_ignorehwgamma",					"0",						CVAR_ARCHIVE|CVAR_LATCH );
-	r_mode								= ri->Cvar_Get( "r_mode",							"4",						CVAR_ARCHIVE|CVAR_LATCH );
+	cvar_t *r_mode						= ri->Cvar_Get( "r_mode",							"4",						CVAR_ARCHIVE|CVAR_LATCH|CVAR_R_MODE_HACK );
 	r_fullscreen						= ri->Cvar_Get( "r_fullscreen",						"0",						CVAR_ARCHIVE|CVAR_LATCH );
 	r_noborder							= ri->Cvar_Get( "r_noborder",						"0",						CVAR_ARCHIVE|CVAR_LATCH );
 	r_centerWindow						= ri->Cvar_Get( "r_centerWindow",					"0",						CVAR_ARCHIVE|CVAR_LATCH );

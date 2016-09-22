@@ -1197,6 +1197,7 @@ Many variables can be used for cheating purposes, so when cheats is zero,
 #define CVAR_SERVER_CREATED	(0x00002000u)	// cvar was created by a server the client connected to.
 #define CVAR_VM_CREATED		(0x00004000u)	// cvar was created exclusively in one of the VMs.
 #define CVAR_PROTECTED		(0x00008000u)	// prevent modifying this var from VMs or the server
+#define CVAR_R_MODE_HACK	(0x00010000u)    // work around for having lots of modes!
 // These flags are only returned by the Cvar_Flags() function
 #define CVAR_MODIFIED		(0x40000000u)	// Cvar was modified
 #define CVAR_NONEXISTENT	(0x80000000u)	// Cvar doesn't exist.

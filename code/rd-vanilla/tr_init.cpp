@@ -696,7 +696,7 @@ static void InitOpenGL( void )
 	//
 	// GLimp_Init directly or indirectly references the following cvars:
 	//		- r_fullscreen
-	//		- r_mode
+	//		- r_video_mode
 	//		- r_(color|depth|stencil)bits
 	//		- r_ignorehwgamma
 	//		- r_gamma
@@ -1243,7 +1243,7 @@ void GfxInfo_f( void )
 	ri.Printf( PRINT_ALL, "GL_MAX_ACTIVE_TEXTURES_ARB: %d\n", glConfig.maxActiveTextures );
 	ri.Printf( PRINT_ALL, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
 	ri.Printf( PRINT_ALL, "MODE: %d, %d x %d %s%s hz:",
-				ri.Cvar_VariableIntegerValue("r_mode"),
+				ri.Cvar_VariableIntegerValue("r_video_mode"),
 				glConfig.vidWidth, glConfig.vidHeight,
 				fullscreen == 0 ? noborderstrings[noborder == 1] : noborderstrings[0],
 				fsstrings[fullscreen == 1] );
