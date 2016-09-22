@@ -232,6 +232,42 @@ bool g_bTextureRectangleHack = false;
 
 void RE_SetLightStyle(int style, int color);
 
+static void DrawSplash(int buffer, image_t *pImage)
+{
+	if (buffer == 0)
+	{
+		backEnd.stereoLeft = qtrue;
+	}
+	else
+	{
+		backEnd.stereoLeft = qfalse;
+	}
+
+	extern void	RB_SetGL2D (void);
+	RB_SetGL2D();
+
+	GL_Bind( pImage );
+	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
+
+	const int width = 640;
+	const int height = 480;
+	const float x1 = 320 - width / 2;
+	const float x2 = 320 + width / 2;
+	const float y1 = 240 - height / 2;
+	const float y2 = 240 + height / 2;
+
+	qglBegin (GL_TRIANGLE_STRIP);
+		qglTexCoord2f( 0,  0 );
+		qglVertex2f(x1, y1);
+		qglTexCoord2f( 1 ,  0 );
+		qglVertex2f(x2, y1);
+		qglTexCoord2f( 0, 1 );
+		qglVertex2f(x1, y2);
+		qglTexCoord2f( 1, 1 );
+		qglVertex2f(x2, y2);
+	qglEnd();
+}
+
 void R_Splash()
 {
 	image_t *pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
@@ -244,29 +280,11 @@ void R_Splash()
 	}
 	else
 	{
-		extern void	RB_SetGL2D (void);
-		RB_SetGL2D();
-
-		GL_Bind( pImage );
-		GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
-
-		const int width = 640;
-		const int height = 480;
-		const float x1 = 320 - width / 2;
-		const float x2 = 320 + width / 2;
-		const float y1 = 240 - height / 2;
-		const float y2 = 240 + height / 2;
-
-		qglBegin (GL_TRIANGLE_STRIP);
-			qglTexCoord2f( 0,  0 );
-			qglVertex2f(x1, y1);
-			qglTexCoord2f( 1 ,  0 );
-			qglVertex2f(x2, y1);
-			qglTexCoord2f( 0, 1 );
-			qglVertex2f(x1, y2);
-			qglTexCoord2f( 1, 1 );
-			qglVertex2f(x2, y2);
-		qglEnd();
+		DrawSplash(0, pImage);
+		if (glConfig.stereoEnabled)
+		{
+			DrawSplash(1, pImage);
+		}
 	}
 
 	ri.WIN_Present( &window );

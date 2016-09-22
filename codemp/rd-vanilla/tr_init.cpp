@@ -266,20 +266,17 @@ bool g_bTextureRectangleHack = false;
 void RE_SetLightStyle(int style, int color);
 void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal );
 
-void R_Splash()
+static void DrawSplash(int buffer, image_t *pImage)
 {
-	image_t *pImage;
-/*	const char* s = ri->Cvar_VariableString("se_language");
-	if (Q_stricmp(s,"english"))
+	if (buffer == 0)
 	{
-		pImage = R_FindImageFile( "menu/splash_eur", qfalse, qfalse, qfalse, GL_CLAMP);
+		backEnd.stereoLeft = qtrue;
 	}
 	else
 	{
-		pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+		backEnd.stereoLeft = qfalse;
 	}
-*/
-	pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+
 	extern void	RB_SetGL2D (void);
 	RB_SetGL2D();
 	if (pImage )
@@ -306,6 +303,28 @@ void R_Splash()
 		qglTexCoord2f( 1, 1 );
 		qglVertex2f(x2, y2);
 	qglEnd();
+}
+
+void R_Splash()
+{
+	image_t *pImage;
+/*	const char* s = ri->Cvar_VariableString("se_language");
+	if (Q_stricmp(s,"english"))
+	{
+		pImage = R_FindImageFile( "menu/splash_eur", qfalse, qfalse, qfalse, GL_CLAMP);
+	}
+	else
+	{
+		pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+	}
+*/
+	pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+
+	DrawSplash(0, pImage);
+	if (glConfig.stereoEnabled)
+	{
+		DrawSplash(1, pImage);
+	}
 
 	ri->WIN_Present(&window);
 }

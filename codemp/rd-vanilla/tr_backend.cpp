@@ -427,10 +427,30 @@ void SetViewportAndScissor( void ) {
 	qglMatrixMode(GL_MODELVIEW);
 
 	// set the window clipping
-	qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
-	qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	if (glConfig.stereoEnabled)
+	{
+		if (backEnd.stereoLeft)
+		{
+			qglViewport( backEnd.viewParms.viewportX/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+			qglScissor( backEnd.viewParms.viewportX/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+		}
+		else
+		{
+			qglViewport( backEnd.viewParms.viewportX/2 + glConfig.vidWidth/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+			qglScissor( backEnd.viewParms.viewportX/2 + glConfig.vidWidth/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+		}
+	}
+	else
+	{
+		qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+		qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	}
 }
 
 /*
@@ -1187,8 +1207,24 @@ void	RB_SetGL2D (void) {
 	backEnd.projection2D = qtrue;
 
 	// set 2D virtual screen size
-	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+	if (glConfig.stereoEnabled)
+	{
+		if (backEnd.stereoLeft)
+		{
+			qglViewport( 0, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+			qglScissor( 0, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+		}
+		else
+		{
+			qglViewport( glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+			qglScissor( glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+		}
+	}
+	else
+	{
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+		qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+	}
 	qglMatrixMode(GL_PROJECTION);
     qglLoadIdentity ();
 	qglOrtho (0, 640, 480, 0, 0, 1);
@@ -1710,7 +1746,26 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 	cmd = (const drawBufferCommand_t *)data;
 
-	qglDrawBuffer( cmd->buffer );
+	if (glConfig.stereoEnabled)
+	{
+		if (cmd->buffer == GL_BACK_RIGHT)
+		{
+			qglViewport(glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			qglScissor(glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			backEnd.stereoLeft = qfalse;
+		}
+		else
+		{
+			qglViewport(0, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			qglScissor(0, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			backEnd.stereoLeft = qtrue;
+		}
+	}
+	else
+	{
+		qglViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+		qglScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	}
 
 	// clear screen for debugging
 	if (tr.world && tr.world->globalFog != -1)

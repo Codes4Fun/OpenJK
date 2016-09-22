@@ -426,10 +426,30 @@ void SetViewportAndScissor( void ) {
 	qglMatrixMode(GL_MODELVIEW);
 
 	// set the window clipping
-	qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
-	qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	if (glConfig.stereoEnabled)
+	{
+		if (backEnd.stereoLeft)
+		{
+			qglViewport( backEnd.viewParms.viewportX/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+			qglScissor( backEnd.viewParms.viewportX/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+		}
+		else
+		{
+			qglViewport( backEnd.viewParms.viewportX/2 + glConfig.vidWidth/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+			qglScissor( backEnd.viewParms.viewportX/2 + glConfig.vidWidth/2, backEnd.viewParms.viewportY,
+				backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight );
+		}
+	}
+	else
+	{
+		qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+		qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	}
 }
 
 /*
@@ -979,8 +999,24 @@ void	RB_SetGL2D (void) {
 	backEnd.projection2D = qtrue;
 
 	// set 2D virtual screen size
-	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+	if (glConfig.stereoEnabled)
+	{
+		if (backEnd.stereoLeft)
+		{
+			qglViewport( 0, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+			qglScissor( 0, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+		}
+		else
+		{
+			qglViewport( glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+			qglScissor( glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+		}
+	}
+	else
+	{
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+		qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+	}
 	qglMatrixMode(GL_PROJECTION);
     qglLoadIdentity ();
 	qglOrtho (0, 640, 480, 0, 0, 1);
@@ -1341,7 +1377,21 @@ const void	*RB_DrawSurfs( const void *data ) {
 		qglDisable( GL_TEXTURE_2D );
 		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
 		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
-		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight);
+		if (glConfig.stereoEnabled)
+		{
+			if (backEnd.stereoLeft)
+			{
+				qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, backEnd.viewParms.viewportX/2, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight);
+			}
+			else
+			{
+				qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, backEnd.viewParms.viewportX/2 + glConfig.vidWidth/2, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight);
+			}
+		}
+		else
+		{
+			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight);
+		}
 		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
 		qglEnable( GL_TEXTURE_2D );
 
@@ -1359,25 +1409,57 @@ const void	*RB_DrawSurfs( const void *data ) {
 		qglDisable( GL_TEXTURE_2D );
 		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
 		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenGlow );
-		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0,  backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+		if (glConfig.stereoEnabled)
+		{
+			if (backEnd.stereoLeft)
+			{
+				qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, backEnd.viewParms.viewportX/2, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight);
+			}
+			else
+			{
+				qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, backEnd.viewParms.viewportX/2 + glConfig.vidWidth/2, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight);
+			}
+		}
+		else
+		{
+			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0,  backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+		}
 		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
 		qglEnable( GL_TEXTURE_2D );
 
 		// Resize the viewport to the blur texture size.
 		const int oldViewWidth = backEnd.viewParms.viewportWidth;
 		const int oldViewHeight = backEnd.viewParms.viewportHeight;
+		//const qboolean oldStereoEnabled = glConfig.stereoEnabled;
 		backEnd.viewParms.viewportWidth = r_DynamicGlowWidth->integer;
 		backEnd.viewParms.viewportHeight = r_DynamicGlowHeight->integer;
+		//glConfig.stereoEnabled = qfalse;
 		SetViewportAndScissor();
 
 		// Blur the scene.
 		RB_BlurGlowTexture();
 
+		//glConfig.stereoEnabled = oldStereoEnabled;
+#if 1
 		// Copy the finished glow scene back to texture.
 		qglDisable( GL_TEXTURE_2D );
 		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
 		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.blurImage );
-		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+		if (glConfig.stereoEnabled)
+		{
+			if (backEnd.stereoLeft)
+			{
+				qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight);
+			}
+			else
+			{
+				qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, glConfig.vidWidth/2, 0, backEnd.viewParms.viewportWidth/2, backEnd.viewParms.viewportHeight);
+			}
+		}
+		else
+		{
+			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+		}
 		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
 		qglEnable( GL_TEXTURE_2D );
 
@@ -1389,6 +1471,7 @@ const void	*RB_DrawSurfs( const void *data ) {
 
 		// Draw the glow additively over the screen.
 		RB_DrawGlowOverlay();
+#endif
 	}
 
 	return (const void *)(cmd + 1);
@@ -1406,7 +1489,26 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 	cmd = (const drawBufferCommand_t *)data;
 
-	qglDrawBuffer( cmd->buffer );
+	if (glConfig.stereoEnabled)
+	{
+		if (cmd->buffer == GL_BACK_RIGHT)
+		{
+			qglViewport(glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			qglScissor(glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			backEnd.stereoLeft = qfalse;
+		}
+		else
+		{
+			qglViewport(0, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			qglScissor(0, 0, glConfig.vidWidth/2, glConfig.vidHeight);
+			backEnd.stereoLeft = qtrue;
+		}
+	}
+	else
+	{
+		qglViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+		qglScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	}
 
 		// clear screen for debugging
 	if (!( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && tr.world && tr.refdef.rdflags & RDF_doLAGoggles)
@@ -1708,6 +1810,15 @@ static inline void RB_BlurGlowTexture()
 	qglDisable (GL_CLIP_PLANE0);
 	GL_Cull( CT_TWO_SIDED );
 
+	int screenX = 0;
+	if (glConfig.stereoEnabled)
+	{
+		if (!backEnd.stereoLeft)
+		{
+			screenX = glConfig.vidWidth/2;
+		}
+	}
+
 	// Go into orthographic 2d mode.
 	qglMatrixMode(GL_PROJECTION);
 	qglPushMatrix();
@@ -1779,7 +1890,19 @@ static inline void RB_BlurGlowTexture()
 	/////////////////////////////////////////////////////////
 
 	//int iTexWidth = backEnd.viewParms.viewportWidth, iTexHeight = backEnd.viewParms.viewportHeight;
-	int iTexWidth = glConfig.vidWidth, iTexHeight = glConfig.vidHeight;
+	int iTexX0 = 0, iTexX1 = glConfig.vidWidth, iTexHeight = glConfig.vidHeight;
+
+	if (glConfig.stereoEnabled)
+	{
+		//if (backEnd.stereoLeft)
+		{
+			iTexX1 /= 2;
+		}
+		//else
+		//{
+		//	iTexX0 = iTexX1 / 2;
+		//}
+	}
 
 	for ( int iNumBlurPasses = 0; iNumBlurPasses < r_DynamicGlowPasses->integer; iNumBlurPasses++ )
 	{
@@ -1794,7 +1917,12 @@ static inline void RB_BlurGlowTexture()
 		{
 			if ( !g_bTextureRectangleHack )
 			{
-				iTexWidth = backEnd.viewParms.viewportWidth;
+				iTexX0 = 0;
+				iTexX1 = backEnd.viewParms.viewportWidth;
+				if (glConfig.stereoEnabled)
+				{
+					iTexX1 /= 2;
+				}
 				iTexHeight = backEnd.viewParms.viewportHeight;
 			}
 
@@ -1818,26 +1946,26 @@ static inline void RB_BlurGlowTexture()
 
 			// Copy the current image over.
 			qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, uiTex );
-			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, screenX, 0, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
 		}
 
 		// Draw the fullscreen quad.
 		qglBegin( GL_QUADS );
-			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, 0, iTexHeight );
+			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, iTexX0, iTexHeight );
 			qglVertex2f( 0, 0 );
 
-			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, 0, 0 );
+			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, iTexX0, 0 );
 			qglVertex2f( 0, backEnd.viewParms.viewportHeight );
 
-			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, iTexWidth, 0 );
+			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, iTexX1, 0 );
 			qglVertex2f( backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
 
-			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, iTexWidth, iTexHeight );
+			qglMultiTexCoord2fARB( GL_TEXTURE0_ARB, iTexX1, iTexHeight );
 			qglVertex2f( backEnd.viewParms.viewportWidth, 0 );
 		qglEnd();
 
 		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.blurImage );
-		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, screenX, 0, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
 
 		// Increase the texel offsets.
 		// NOTE: This is possibly the most important input to the effect. Even by using an exponential function I've been able to
@@ -1880,6 +2008,26 @@ static inline void RB_DrawGlowOverlay()
 	qglDisable (GL_CLIP_PLANE0);
 	GL_Cull( CT_TWO_SIDED );
 
+	int vidX0, vidX1;
+	if (glConfig.stereoEnabled)
+	{
+		//if (backEnd.stereoLeft)
+		{
+			vidX0 = 0;
+			vidX1 = glConfig.vidWidth/2;
+		}
+		//else
+		//{
+		//	vidX0 = glConfig.vidWidth/2;
+		//	vidX1 = glConfig.vidWidth;
+		//}
+	}
+	else
+	{
+		vidX0 = 0;
+		vidX1 = glConfig.vidWidth;
+	}
+
 	// Go into orthographic 2d mode.
 	qglMatrixMode(GL_PROJECTION);
 	qglPushMatrix();
@@ -1901,20 +2049,21 @@ static inline void RB_DrawGlowOverlay()
 		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
 		qglBegin(GL_QUADS);
 			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-			qglTexCoord2f( 0, glConfig.vidHeight );
+			qglTexCoord2f( vidX0, glConfig.vidHeight );
 			qglVertex2f( 0, 0 );
 
-			qglTexCoord2f( 0, 0 );
+			qglTexCoord2f( vidX0, 0 );
 			qglVertex2f( 0, glConfig.vidHeight );
 
-			qglTexCoord2f( glConfig.vidWidth, 0 );
+			qglTexCoord2f( vidX1, 0 );
 			qglVertex2f( glConfig.vidWidth, glConfig.vidHeight );
 
-			qglTexCoord2f( glConfig.vidWidth, glConfig.vidHeight );
+			qglTexCoord2f( vidX1, glConfig.vidHeight );
 			qglVertex2f( glConfig.vidWidth, 0 );
 		qglEnd();
 	}
 
+#if 1
 	// One and Inverse Src Color give a very soft addition, while one one is a bit stronger. With one one we can
 	// use additive blending through multitexture though.
 	if ( r_DynamicGlowSoft->integer )
@@ -1927,22 +2076,30 @@ static inline void RB_DrawGlowOverlay()
 	}
 	qglEnable( GL_BLEND );
 
+	int glowX0 = 0;
+	int glowX1 = r_DynamicGlowWidth->integer;
+	if (glConfig.stereoEnabled)
+	{
+		glowX1 /= 2;
+	}
+
 	// Now additively render the glow texture.
 	qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.blurImage );
 	qglBegin(GL_QUADS);
 		qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-		qglTexCoord2f( 0, r_DynamicGlowHeight->integer );
+		qglTexCoord2f( glowX0, r_DynamicGlowHeight->integer );
 		qglVertex2f( 0, 0 );
 
-		qglTexCoord2f( 0, 0 );
+		qglTexCoord2f( glowX0, 0 );
 		qglVertex2f( 0, glConfig.vidHeight );
 
-		qglTexCoord2f( r_DynamicGlowWidth->integer, 0 );
+		qglTexCoord2f( glowX1, 0 );
 		qglVertex2f( glConfig.vidWidth, glConfig.vidHeight );
 
-		qglTexCoord2f( r_DynamicGlowWidth->integer, r_DynamicGlowHeight->integer );
+		qglTexCoord2f( glowX1, r_DynamicGlowHeight->integer );
 		qglVertex2f( glConfig.vidWidth, 0 );
 	qglEnd();
+#endif
 
 	qglDisable( GL_TEXTURE_RECTANGLE_ARB );
 	qglEnable( GL_TEXTURE_2D );
