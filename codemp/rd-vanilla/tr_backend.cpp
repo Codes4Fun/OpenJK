@@ -1799,6 +1799,10 @@ RB_DrawBuffer
 const void	*RB_DrawBuffer( const void *data ) {
 	const drawBufferCommand_t	*cmd;
 
+	if ( tess.numIndexes ) {
+		RB_EndSurface();	//this might change culling and other states
+	}
+
 	cmd = (const drawBufferCommand_t *)data;
 
 	GL_DrawBuffer( cmd->buffer );
