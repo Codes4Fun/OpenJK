@@ -1267,7 +1267,7 @@ void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
 void	GL_State( uint32_t stateVector );
 void	GL_DrawBuffer( int buffer );
-void	GL_Present( void );
+void	GL_Present( int stereo );
 void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
 

@@ -266,27 +266,9 @@ bool g_bTextureRectangleHack = false;
 void RE_SetLightStyle(int style, int color);
 void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal );
 
-void R_Splash()
+static void DrawSplash(int buffer)
 {
-	image_t *pImage;
-/*	const char* s = ri->Cvar_VariableString("se_language");
-	if (Q_stricmp(s,"english"))
-	{
-		pImage = R_FindImageFile( "menu/splash_eur", qfalse, qfalse, qfalse, GL_CLAMP);
-	}
-	else
-	{
-		pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
-	}
-*/
-	pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
-	extern void	RB_SetGL2D (void);
-	RB_SetGL2D();
-	if (pImage )
-	{//invalid paths?
-		GL_Bind( pImage );
-	}
-	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
+	GL_DrawBuffer(buffer);
 
 	const int width = 640;
 	const int height = 480;
@@ -294,7 +276,6 @@ void R_Splash()
 	const float x2 = 320 + width / 2;
 	const float y1 = 240 - height / 2;
 	const float y2 = 240 + height / 2;
-
 
 	qglBegin (GL_TRIANGLE_STRIP);
 		qglTexCoord2f( 0,  0 );
@@ -306,8 +287,45 @@ void R_Splash()
 		qglTexCoord2f( 1, 1 );
 		qglVertex2f(x2, y2);
 	qglEnd();
+}
 
-	GL_Present();
+void R_Splash()
+{
+	image_t *pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+
+	if ( !pImage )
+	{
+		// Can't find the splash image so just clear to black
+		qglClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+		qglClear( GL_COLOR_BUFFER_BIT );
+	}
+	else
+	{
+		extern void	RB_SetGL2D (void);
+		RB_SetGL2D();
+
+		GL_Bind( pImage );
+		GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
+
+		if (glConfig.stereoEnabled == 2)
+		{
+			qglViewport( 0, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+			DrawSplash(GL_BACK);
+			qglViewport( glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight );
+			DrawSplash(GL_BACK);
+		}
+		else if (glConfig.stereoEnabled == 1)
+		{
+			DrawSplash(GL_BACK_LEFT);
+			DrawSplash(GL_BACK_RIGHT);
+		}
+		else
+		{
+			DrawSplash(GL_BACK);
+		}
+	}
+
+	GL_Present(0);
 }
 
 /*

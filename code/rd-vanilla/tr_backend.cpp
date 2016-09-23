@@ -399,6 +399,7 @@ void GL_State( uint32_t stateBits )
 void GL_DrawBuffer( int buffer ) {
 	if (glConfig.stereoEnabled == 2)
 	{
+		qglDrawBuffer(GL_BACK);
 		if (buffer == GL_BACK_RIGHT)
 		{
 			// copy left image
@@ -416,9 +417,9 @@ void GL_DrawBuffer( int buffer ) {
 	}
 }
 
-void GL_Present( void )
+void GL_Present( int stereo )
 {
-	if (glConfig.stereoEnabled == 2)
+	if (glConfig.stereoEnabled == 2 && stereo)
 	{
 		// copy right image
 		qglDisable( GL_TEXTURE_2D );
@@ -1662,7 +1663,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 
-	GL_Present();
+	GL_Present(1);
 
 	backEnd.projection2D = qfalse;
 
