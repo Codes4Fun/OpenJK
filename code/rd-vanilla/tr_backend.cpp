@@ -396,6 +396,97 @@ void GL_State( uint32_t stateBits )
 	glState.glStateBits = stateBits;
 }
 
+void GL_DrawBuffer( int buffer ) {
+	if (glConfig.stereoEnabled == 2)
+	{
+		if (buffer == GL_BACK_RIGHT)
+		{
+			// copy left image
+			qglDisable( GL_TEXTURE_2D );
+			qglEnable( GL_TEXTURE_RECTANGLE_ARB );
+			qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenLeftImage );
+			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+			qglDisable( GL_TEXTURE_RECTANGLE_ARB );
+			qglEnable( GL_TEXTURE_2D );
+		}
+	}
+	else
+	{
+		qglDrawBuffer(buffer);
+	}
+}
+
+void GL_Present( void )
+{
+	if (glConfig.stereoEnabled == 2)
+	{
+		// copy right image
+		qglDisable( GL_TEXTURE_2D );
+		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
+		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
+		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
+		qglEnable( GL_TEXTURE_2D );
+
+		qglDisable (GL_CLIP_PLANE0);
+		GL_Cull( CT_TWO_SIDED );
+
+		// Go into orthographic 2d mode.
+		qglMatrixMode(GL_PROJECTION);
+		qglPushMatrix();
+		qglLoadIdentity();
+		qglOrtho(0, glConfig.vidWidth, glConfig.vidHeight, 0, -1, 1);
+		qglMatrixMode(GL_MODELVIEW);
+		qglPushMatrix();
+		qglLoadIdentity();
+
+		GL_State(GLS_DEPTHTEST_DISABLE);
+
+		qglDisable( GL_TEXTURE_2D );
+		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
+
+		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenLeftImage );
+		qglBegin(GL_QUADS);
+			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+			qglTexCoord2f( 0, glConfig.vidHeight );
+			qglVertex2f( 0, 0 );
+
+			qglTexCoord2f( 0, 0 );
+			qglVertex2f( 0, glConfig.vidHeight );
+
+			qglTexCoord2f( glConfig.vidWidth, 0 );
+			qglVertex2f( glConfig.vidWidth/2, glConfig.vidHeight );
+
+			qglTexCoord2f( glConfig.vidWidth, glConfig.vidHeight );
+			qglVertex2f( glConfig.vidWidth/2, 0 );
+		qglEnd();
+
+		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
+		qglBegin(GL_QUADS);
+			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+			qglTexCoord2f( 0, glConfig.vidHeight );
+			qglVertex2f( glConfig.vidWidth/2, 0 );
+
+			qglTexCoord2f( 0, 0 );
+			qglVertex2f( glConfig.vidWidth/2, glConfig.vidHeight );
+
+			qglTexCoord2f( glConfig.vidWidth, 0 );
+			qglVertex2f( glConfig.vidWidth, glConfig.vidHeight );
+
+			qglTexCoord2f( glConfig.vidWidth, glConfig.vidHeight );
+			qglVertex2f( glConfig.vidWidth, 0 );
+		qglEnd();
+
+		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
+		qglEnable( GL_TEXTURE_2D );
+
+		qglMatrixMode(GL_PROJECTION);
+		qglPopMatrix();
+		qglMatrixMode(GL_MODELVIEW);
+		qglPopMatrix();
+	}
+	ri.WIN_Present(&window);
+}
 
 
 /*
@@ -1406,7 +1497,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 	cmd = (const drawBufferCommand_t *)data;
 
-	qglDrawBuffer( cmd->buffer );
+	GL_DrawBuffer( cmd->buffer );
 
 		// clear screen for debugging
 	if (!( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && tr.world && tr.refdef.rdflags & RDF_doLAGoggles)
@@ -1571,7 +1662,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 
-	ri.WIN_Present(&window);
+	GL_Present();
 
 	backEnd.projection2D = qfalse;
 

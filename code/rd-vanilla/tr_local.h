@@ -992,6 +992,9 @@ typedef struct {
 	// A rectangular texture representing the normally rendered scene.
 	GLuint					sceneImage;
 
+	// A copy of the screen for the stereoscopic left image;
+	GLuint					screenLeftImage;
+
 	// Image used to downsample and blur scene to.	- AReis
 	GLuint					blurImage;
 
@@ -1263,6 +1266,8 @@ void	GL_SelectTexture( int unit );
 void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
 void	GL_State( uint32_t stateVector );
+void	GL_DrawBuffer( int buffer );
+void	GL_Present( void );
 void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
 

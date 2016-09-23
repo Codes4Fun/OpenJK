@@ -552,13 +552,19 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 
 			if(r_stereo->integer)
 			{
-				glConfig->stereoEnabled = qtrue;
-				SDL_GL_SetAttribute(SDL_GL_STEREO, 1);
+				if (SDL_GL_SetAttribute(SDL_GL_STEREO, 1) != 0)
+				{
+					glConfig->stereoEnabled = 2;
+				}
+				else
+				{
+					glConfig->stereoEnabled = 1;
+				}
 			}
 			else
 			{
-				glConfig->stereoEnabled = qfalse;
 				SDL_GL_SetAttribute(SDL_GL_STEREO, 0);
+				glConfig->stereoEnabled = 0;
 			}
 
 			SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
@@ -567,8 +573,22 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 			if( ( screen = SDL_CreateWindow( windowTitle, x, y,
 					glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
 			{
-				Com_DPrintf( "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
-				continue;
+				if (r_stereo->integer)
+				{
+					SDL_GL_SetAttribute(SDL_GL_STEREO, 0);
+					glConfig->stereoEnabled = 2;
+					if( ( screen = SDL_CreateWindow( windowTitle, x, y,
+							glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
+					{
+						Com_DPrintf( "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
+						continue;
+					}
+				}
+				else
+				{
+					Com_DPrintf( "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
+					continue;
+				}
 			}
 
 #ifndef MACOS_X

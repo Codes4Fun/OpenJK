@@ -269,7 +269,7 @@ void R_Splash()
 		qglEnd();
 	}
 
-	ri.WIN_Present( &window );
+	GL_Present();
 }
 
 /*

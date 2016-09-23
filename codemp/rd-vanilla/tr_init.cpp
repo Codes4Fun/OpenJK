@@ -307,7 +307,7 @@ void R_Splash()
 		qglVertex2f(x2, y2);
 	qglEnd();
 
-	ri->WIN_Present(&window);
+	GL_Present();
 }
 
 /*

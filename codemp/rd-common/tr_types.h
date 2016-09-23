@@ -400,5 +400,5 @@ typedef struct glconfig_s {
 	// a Voodoo or Voodoo2 will have this set to TRUE, as will a Win32 ICD that
 	// used CDS.
 	qboolean				isFullscreen;
-	qboolean				stereoEnabled;
+	int						stereoEnabled;
 } glconfig_t;
