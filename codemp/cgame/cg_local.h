@@ -1833,7 +1833,7 @@ void CG_S_StopLoopingSound(int entityNum, sfxHandle_t sfx);
 void CG_S_UpdateLoopingSounds(int entityNum);
 
 void CG_SetEntitySoundPosition( centity_t *cent );
-void CG_AddPacketEntities( qboolean isPortal );
+void CG_AddPacketEntities( qboolean isPortal, qboolean paused );
 void CG_ManualEntityRender(centity_t *cent);
 void CG_Beam( centity_t *cent );
 void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int toTime, vec3_t out );

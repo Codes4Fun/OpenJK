@@ -514,7 +514,26 @@ static void RB_Hyperspace( void ) {
 
 void SetViewportAndScissor( void ) {
 	qglMatrixMode(GL_PROJECTION);
-	qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
+	if (glConfig.stereoEnabled)
+	{
+		qglLoadIdentity();
+		const float screen = 52.25f;// screen width 52.25"
+		const float ipd = 0;//2.4f;// IPD 2.4"
+		const float shift = ipd/screen;
+		if (backEnd.stereoLeft)
+		{
+			qglTranslatef(-shift, 0, 0);
+		}
+		else
+		{
+			qglTranslatef(shift, 0, 0);
+		}
+		qglMultMatrixf( backEnd.viewParms.projectionMatrix );
+	}
+	else
+	{
+		qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
+	}
 	qglMatrixMode(GL_MODELVIEW);
 
 	// set the window clipping
@@ -1805,6 +1824,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 	cmd = (const drawBufferCommand_t *)data;
 
+	backEnd.stereoLeft = (cmd->buffer == GL_BACK_LEFT)? qtrue : qfalse;
 	GL_DrawBuffer( cmd->buffer );
 
 	// clear screen for debugging

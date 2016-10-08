@@ -422,6 +422,29 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 		return;
 	}
 
+	cls.stereoView = stereoFrame;
+
+	//int serverTimeDelta;
+	int old_sv_paused = 0;
+	int old_cl_paused = 0;
+	if (stereoFrame == STEREO_RIGHT)
+	{
+		//cls.realFrametime = 1;
+		//cls.frametime = 1;
+		//serverTimeDelta = cl.serverTimeDelta;
+		//cl.serverTimeDelta = 1;
+		old_cl_paused = cl_paused->integer;
+		if (!old_cl_paused)
+		{
+			Cvar_Set("cl_paused", "1");
+		}
+		old_sv_paused = sv_paused->integer;
+		if (!old_sv_paused)
+		{
+			Cvar_Set("sv_paused", "1");
+		}
+	}
+
 	// if the menu is going to cover the entire screen, we
 	// don't need to render anything under it
 	//actually, yes you do, unless you want clients to cycle out their reliable
@@ -476,6 +499,19 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 	// debug graph can be drawn on top of anything
 	if ( cl_debuggraph->integer || cl_timegraph->integer || cl_debugMove->integer ) {
 		SCR_DrawDebugGraph ();
+	}
+
+	if (stereoFrame == STEREO_RIGHT)
+	{
+		//cl.serverTimeDelta = serverTimeDelta;
+		if (!old_cl_paused)
+		{
+			Cvar_Set("cl_paused", "0");
+		}
+		if (!old_sv_paused)
+		{
+			Cvar_Set("sv_paused", "0");
+		}
 	}
 }
 

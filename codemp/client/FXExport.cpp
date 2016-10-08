@@ -120,5 +120,10 @@ qboolean FX_FreeSystem( void )
 
 void FX_AdjustTime( int time )
 {
+#if 0
+	if (cls.stereoView == STEREO_RIGHT){
+		time = 1;
+	}
+#endif
 	theFxHelper.AdjustTime(time);
 }

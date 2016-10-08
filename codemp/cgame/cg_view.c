@@ -1797,7 +1797,7 @@ void CG_DrawSkyBoxPortal(const char *cstr)
 		trap->FX_AddScheduledEffects(qtrue);
 	}
 
-	CG_AddPacketEntities(qtrue); //rww - There was no proper way to put real entities inside the portal view before.
+	CG_AddPacketEntities(qtrue, qfalse); //rww - There was no proper way to put real entities inside the portal view before.
 									//This will put specially flagged entities in the render.
 
 	if (cg_skyOri)
@@ -2417,6 +2417,72 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	qboolean	isFighter = qfalse;
 #endif
 
+	if ( stereoView == STEREO_RIGHT ) {
+		// minimal code needed to draw the right view without updating time
+
+		// if we are only updating the screen as a loading
+		// pacifier, don't even try to read snapshots
+		if ( cg.infoScreenText[0] != 0 ) {
+			CG_DrawInformation();
+			return;
+		}
+
+		// if we haven't received any snapshots yet, all
+		// we can draw is the information screen
+		if ( !cg.snap || ( cg.snap->snapFlags & SNAPFLAG_NOT_ACTIVE ) )
+		{
+#if 0
+			// Transition from zero to negative one on the snapshot timeout.
+			// The reason we do this is because the first client frame is responsible for
+			// some farily slow processing (such as weather) and we dont want to include
+			// that processing time into our calculations
+			if ( !cg.snapshotTimeoutTime )
+			{
+				cg.snapshotTimeoutTime = -1;
+			}
+			// Transition the snapshot timeout time from -1 to the current time in
+			// milliseconds which will start the timeout.
+			else if ( cg.snapshotTimeoutTime == -1 )
+			{
+				cg.snapshotTimeoutTime = trap->Milliseconds ( );
+			}
+
+			// If we have been waiting too long then just error out
+			if ( cg.snapshotTimeoutTime > 0 && (trap->Milliseconds ( ) - cg.snapshotTimeoutTime > cg_snapshotTimeout.integer * 1000) )
+			{
+				Com_Error ( ERR_DROP, CG_GetStringEdString("MP_SVGAME", "SNAPSHOT_TIMEOUT"));
+				return;
+			}
+#endif
+			CG_DrawInformation();
+			return;
+		}
+
+		trap->FX_AdjustTime( 1 );
+
+		if (cstr && cstr[0])
+		{ //we have a skyportal
+			CG_DrawSkyBoxPortal(cstr);
+		}
+
+		if ( !cg.hyperspace ) {
+			CG_AddPacketEntities(qfalse,qfalse);			// adter calcViewValues, so predicted player state is correct
+			CG_AddMarks();
+			CG_AddLocalEntities();
+		}
+
+		if ( !cg.hyperspace)
+		{
+			trap->FX_AddScheduledEffects(qfalse);
+		}
+
+		CG_DrawActive( stereoView );
+
+		CG_DrawAutoMap();
+
+		return;
+	}
+
 	if (cgQueueLoad)
 	{ //do this before you start messing around with adding ghoul2 refents and crap
 		CG_ActualLoadDeferredPlayers();
@@ -2636,7 +2702,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	// build the render lists
 	if ( !cg.hyperspace ) {
-		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
+		CG_AddPacketEntities(qfalse, qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
 		CG_AddLocalEntities();
 	}

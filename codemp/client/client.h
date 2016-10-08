@@ -326,6 +326,8 @@ typedef struct clientStatic_s {
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
+
+	stereoFrame_t	stereoView;
 } clientStatic_t;
 
 #define	CON_TEXTSIZE	0x30000 //was 32768

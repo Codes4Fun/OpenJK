@@ -81,9 +81,15 @@ RE_ClearScene
 ====================
 */
 void RE_ClearScene( void ) {
+#if 1
 	r_firstSceneDlight = r_numdlights;
 	r_firstSceneEntity = r_numentities;
 	r_firstScenePoly = r_numpolys;
+#else
+	r_firstSceneDlight = 0;
+	r_firstSceneEntity = 0;
+	r_firstScenePoly = 0;
+#endif
 	refEntParent = -1;
 	r_firstSceneMiniEntity = r_numminientities;
 }

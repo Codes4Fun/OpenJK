@@ -1082,7 +1082,10 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return re->AnyLanguage_ReadCharFromString( (const char *) VMA(1), (int *) VMA(2), (qboolean *) VMA(3) );
 
 	case CG_R_CLEARSCENE:
-		re->ClearScene();
+		//if (cls.stereoView != STEREO_RIGHT)
+		{
+			re->ClearScene();
+		}
 		return 0;
 
 	case CG_R_CLEARDECALS:
@@ -1090,15 +1093,24 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case CG_R_ADDREFENTITYTOSCENE:
-		re->AddRefEntityToScene( (const refEntity_t *)VMA(1) );
+		//if (cls.stereoView != STEREO_RIGHT)
+		{
+			re->AddRefEntityToScene( (const refEntity_t *)VMA(1) );
+		}
 		return 0;
 
 	case CG_R_ADDPOLYTOSCENE:
-		re->AddPolyToScene( args[1], args[2], (const polyVert_t *)VMA(3), 1 );
+		//if (cls.stereoView != STEREO_RIGHT)
+		{
+			re->AddPolyToScene( args[1], args[2], (const polyVert_t *)VMA(3), 1 );
+		}
 		return 0;
 
 	case CG_R_ADDPOLYSTOSCENE:
-		re->AddPolyToScene( args[1], args[2], (const polyVert_t *)VMA(3), args[4] );
+		//if (cls.stereoView != STEREO_RIGHT)
+		{
+			re->AddPolyToScene( args[1], args[2], (const polyVert_t *)VMA(3), args[4] );
+		}
 		return 0;
 
 	case CG_R_ADDDECALTOSCENE:
@@ -1106,14 +1118,24 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case CG_R_LIGHTFORPOINT:
-		return re->LightForPoint( (float *)VMA(1), (float *)VMA(2), (float *)VMA(3), (float *)VMA(4) );
+		//if (cls.stereoView != STEREO_RIGHT)
+		{
+			return re->LightForPoint( (float *)VMA(1), (float *)VMA(2), (float *)VMA(3), (float *)VMA(4) );
+		}
+		return 0;
 
 	case CG_R_ADDLIGHTTOSCENE:
-		re->AddLightToScene( (const float *)VMA(1), VMF(2), VMF(3), VMF(4), VMF(5) );
+		//if (cls.stereoView != STEREO_RIGHT)
+		{
+			re->AddLightToScene( (const float *)VMA(1), VMF(2), VMF(3), VMF(4), VMF(5) );
+		}
 		return 0;
 
 	case CG_R_ADDADDITIVELIGHTTOSCENE:
-		re->AddAdditiveLightToScene( (const float *)VMA(1), VMF(2), VMF(3), VMF(4), VMF(5) );
+		//if (cls.stereoView != STEREO_RIGHT)
+		{
+			re->AddAdditiveLightToScene( (const float *)VMA(1), VMF(2), VMF(3), VMF(4), VMF(5) );
+		}
 		return 0;
 
 	case CG_R_RENDERSCENE:

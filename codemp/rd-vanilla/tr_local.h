@@ -929,6 +929,7 @@ typedef struct backEndState_s {
 	byte		color2D[4];
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
+	qboolean	stereoLeft;
 } backEndState_t;
 
 /*

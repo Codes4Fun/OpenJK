@@ -3400,7 +3400,7 @@ CG_AddPacketEntities
 
 ===============
 */
-void CG_AddPacketEntities( qboolean isPortal ) {
+void CG_AddPacketEntities( qboolean isPortal, qboolean paused ) {
 	int					num;
 	centity_t			*cent;
 	playerState_t		*ps;
@@ -3420,7 +3420,7 @@ void CG_AddPacketEntities( qboolean isPortal ) {
 	}
 
 	// set cg.frameInterpolation
-	if ( cg.nextSnap ) {
+	if ( cg.nextSnap && !paused ) {
 		int		delta;
 
 		delta = (cg.nextSnap->serverTime - cg.snap->serverTime);
@@ -3454,7 +3454,10 @@ void CG_AddPacketEntities( qboolean isPortal ) {
 	ps = &cg.predictedPlayerState;
 
 	CG_CheckPlayerG2Weapons(ps, &cg_entities[cg.predictedPlayerState.clientNum]);
-	BG_PlayerStateToEntityState( ps, &cg_entities[cg.predictedPlayerState.clientNum].currentState, qfalse );
+	if (!paused)
+	{
+		BG_PlayerStateToEntityState( ps, &cg_entities[cg.predictedPlayerState.clientNum].currentState, qfalse );
+	}
 
 	if (cg.predictedPlayerState.m_iVehicleNum)
 	{ //add the vehicle I'm riding first

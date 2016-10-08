@@ -934,6 +934,10 @@ void CG_PredictPlayerState( void ) {
 	centity_t *pEnt;
 	clientInfo_t *ci;
 
+	/*if (cls.stereoView == STEREO_RIGHT){
+		return;
+	}*/
+
 	cg.hyperspace = qfalse;	// will be set if touching a trigger_teleport
 
 	// if this is the first frame we must guarantee
