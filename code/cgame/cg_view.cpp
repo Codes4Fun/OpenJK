@@ -1991,6 +1991,43 @@ static qboolean cg_rangedFogging = qfalse; //so we know if we should go back to 
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView ) {
 	qboolean	inwater = qfalse;
 
+	if ( stereoView == STEREO_RIGHT ) {
+		// minimal code needed to draw the right view without updating time
+
+		// if we are only updating the screen as a loading
+		// pacifier, don't even try to read snapshots
+		if ( cg.infoScreenText[0] != 0 ) {
+			CG_DrawInformation();
+			return;
+		}
+
+		// if we haven't received any snapshots yet, all
+		// we can draw is the information screen
+		if ( !cg.snap ) {
+			//CG_DrawInformation();
+			return;
+		}
+
+		theFxHelper.AdjustTime( 1 );
+
+		CG_DrawSkyBoxPortal();
+		if ( !cg.hyperspace ) {
+			CG_AddPacketEntities(qfalse,qtrue);			// adter calcViewValues, so predicted player state is correct
+			CG_AddMarks();
+			CG_AddLocalEntities();
+			CG_DrawMiscEnts();
+		}
+
+		if ( !cg.hyperspace && fx_freeze.integer<2 ) 
+		{
+			//Add all effects
+			theFxScheduler.AddScheduledEffects( false );
+		}
+
+		CG_DrawActive( stereoView );
+		return;
+	}
+
 	cg.time = serverTime;
 
 	// update cvars
