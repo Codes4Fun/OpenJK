@@ -27,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static cvar_t *in_keyboardDebug     = NULL;
 
-static SDL_Joystick *stick = NULL;
+static SDL_GameController *controller = NULL;
 
 static qboolean mouseAvailable = qfalse;
 static qboolean mouseActive = qfalse;
@@ -37,8 +37,6 @@ static cvar_t *in_nograb;
 
 cvar_t *in_joystick          		= NULL;
 static cvar_t *in_joystickThreshold = NULL;
-static cvar_t *in_joystickNo        = NULL;
-static cvar_t *in_joystickUseAnalog = NULL;
 static cvar_t *in_joystickLogAxis   = NULL;
 static cvar_t *in_joystickLogButtons = NULL;
 
@@ -472,49 +470,61 @@ static void IN_DeactivateMouse( void )
 
 #define MAX_SDL_BUTTON_MAP 15
 
-#if defined(_WIN32)
-static int sdl_button_map[MAX_SDL_BUTTON_MAP] = {
-	A_JOY_DPAD_UP,
-	A_JOY_DPAD_DOWN,
-	A_JOY_DPAD_LEFT,
-	A_JOY_DPAD_RIGHT,
-	A_ESCAPE,
-	A_JOY_SELECT,
-	A_JOY_LS,
-	A_JOY_RS,
-	A_JOY_LB,
-	A_JOY_RB,
-	A_JOY_A,
-	A_JOY_B,
-	A_JOY_X,
-	A_JOY_Y,
+static SDL_GameControllerButton sdl_button[MAX_SDL_BUTTON_MAP] = {
+	SDL_CONTROLLER_BUTTON_A,
+	SDL_CONTROLLER_BUTTON_B,
+	SDL_CONTROLLER_BUTTON_X,
+	SDL_CONTROLLER_BUTTON_Y,
+	SDL_CONTROLLER_BUTTON_BACK,
+	SDL_CONTROLLER_BUTTON_GUIDE,
+	SDL_CONTROLLER_BUTTON_START,
+	SDL_CONTROLLER_BUTTON_LEFTSTICK,
+	SDL_CONTROLLER_BUTTON_RIGHTSTICK,
+	SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
+	SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
+	SDL_CONTROLLER_BUTTON_DPAD_UP,
+	SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+	SDL_CONTROLLER_BUTTON_DPAD_LEFT,
+	SDL_CONTROLLER_BUTTON_DPAD_RIGHT
 };
-#else
+
 static int sdl_button_map[MAX_SDL_BUTTON_MAP] = {
 	A_JOY_A,
 	A_JOY_B,
 	A_JOY_X,
 	A_JOY_Y,
-	A_JOY_LB,
-	A_JOY_RB,
 	A_JOY_SELECT,
-	A_ESCAPE,
 	A_JOY_SYSTEM,
+	A_ESCAPE,
 	A_JOY_LS,
 	A_JOY_RS,
-	A_JOY_DPAD_LEFT,
-	A_JOY_DPAD_RIGHT,
+	A_JOY_LB,
+	A_JOY_RB,
 	A_JOY_DPAD_UP,
 	A_JOY_DPAD_DOWN,
+	A_JOY_DPAD_LEFT,
+	A_JOY_DPAD_RIGHT,
 };
-#endif
 
 #define MAX_SDL_AXIS_MAP 6
-#if defined(_WIN32)
-static int sdl_axis_map[MAX_SDL_AXIS_MAP] = { 0, 1, 2, 3, 4, 5 };
-#else
-static int sdl_axis_map[MAX_SDL_AXIS_MAP] = { 0, 1, 3, 4, 2, 5 };
-#endif
+static SDL_GameControllerAxis sdl_axis[MAX_SDL_AXIS_MAP] = {
+	SDL_CONTROLLER_AXIS_LEFTX,
+	SDL_CONTROLLER_AXIS_LEFTY,
+	SDL_CONTROLLER_AXIS_RIGHTX,
+	SDL_CONTROLLER_AXIS_RIGHTY,
+	SDL_CONTROLLER_AXIS_TRIGGERLEFT,
+	SDL_CONTROLLER_AXIS_TRIGGERRIGHT,
+};
+
+static int sdl_axis_map[] = {
+	AXIS_SIDE,
+	AXIS_FORWARD,
+	AXIS_YAW,
+	AXIS_PITCH,
+	AXIS_UP,
+	AXIS_ROLL,
+};
+
 
 // We translate axes movement into keypresses
 static int joy_keys[16] = {
@@ -547,8 +557,49 @@ struct stick_state_s
 	qboolean buttons[16];  // !!! FIXME: these might be too many.
 	unsigned int oldaxes;
 	int oldaaxes[MAX_JOYSTICK_AXIS];
-	unsigned int oldhats;
 } stick_state;
+
+/*
+===============
+IN_CheckController
+===============
+*/
+static bool IN_CheckController( void )
+{
+	if ( !in_joystick || !in_joystick->integer )
+	{
+		return false;
+	}
+
+	if (controller && SDL_GameControllerGetAttached(controller))
+	{
+		return true;
+	}
+
+	static int check = 0;
+	check++;
+	if (check < 30)
+	{
+		return false;
+	}
+	check = 0;
+
+	int numJoysticks = SDL_NumJoysticks();
+	for (int i = 0; i < numJoysticks; ++i)
+	{
+		if (!SDL_IsGameController(i))
+		{
+			continue;
+		}
+		controller = SDL_GameControllerOpen(i);
+		if (controller)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
 
 /*
 ===============
@@ -561,21 +612,21 @@ static void IN_InitJoystick( void )
 	int total = 0;
 	char buf[16384] = "";
 
-	if (stick != NULL)
-		SDL_JoystickClose(stick);
+	if (controller != NULL)
+		SDL_GameControllerClose(controller);
 
-	stick = NULL;
+	controller = NULL;
 	memset(&stick_state, '\0', sizeof (stick_state));
 
-	if (!SDL_WasInit(SDL_INIT_JOYSTICK))
+	if (!SDL_WasInit(SDL_INIT_GAMECONTROLLER))
 	{
-		Com_DPrintf("Calling SDL_Init(SDL_INIT_JOYSTICK)...\n");
-		if (SDL_Init(SDL_INIT_JOYSTICK) == -1)
+		Com_DPrintf("Calling SDL_Init(SDL_INIT_GAMECONTROLLER)...\n");
+		if (SDL_Init(SDL_INIT_GAMECONTROLLER) == -1)
 		{
-			Com_DPrintf("SDL_Init(SDL_INIT_JOYSTICK) failed: %s\n", SDL_GetError());
+			Com_DPrintf("SDL_Init(SDL_INIT_GAMECONTROLLER) failed: %s\n", SDL_GetError());
 			return;
 		}
-		Com_DPrintf("SDL_Init(SDL_INIT_JOYSTICK) passed.\n");
+		Com_DPrintf("SDL_Init(SDL_INIT_GAMECONTROLLER) passed.\n");
 	}
 
 	total = SDL_NumJoysticks();
@@ -592,15 +643,7 @@ static void IN_InitJoystick( void )
 
 	if( !in_joystick->integer ) {
 		Com_DPrintf( "Joystick is not active.\n" );
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-		return;
 	}
-
-	in_joystickNo = Cvar_Get( "in_joystickNo", "0", CVAR_ARCHIVE );
-	if( in_joystickNo->integer < 0 || in_joystickNo->integer >= total )
-		Cvar_Set( "in_joystickNo", "0" );
-
-	in_joystickUseAnalog = Cvar_Get( "in_joystickUseAnalog", "1", CVAR_ARCHIVE );
 
 	in_joystickThreshold = Cvar_Get( "joy_threshold", "0.15", CVAR_ARCHIVE );
 
@@ -608,23 +651,18 @@ static void IN_InitJoystick( void )
 
 	in_joystickLogButtons = Cvar_Get( "joy_LogButtons", "0", CVAR_ARCHIVE );
 
-	stick = SDL_JoystickOpen( in_joystickNo->integer );
+	IN_CheckController();
 
-	if (stick == NULL) {
+	if (controller == NULL) {
 		Com_DPrintf( "No joystick opened.\n" );
-		return;
+	}
+	else
+	{
+		Com_DPrintf( "Name:       %s\n", SDL_GameControllerName(controller) );
+		Com_DPrintf( "Threshold: %f\n", in_joystickThreshold->value );
 	}
 
-	Com_DPrintf( "Joystick %d opened\n", in_joystickNo->integer );
-	Com_DPrintf( "Name:       %s\n", SDL_JoystickNameForIndex(in_joystickNo->integer) );
-	Com_DPrintf( "Axes:       %d\n", SDL_JoystickNumAxes(stick) );
-	Com_DPrintf( "Hats:       %d\n", SDL_JoystickNumHats(stick) );
-	Com_DPrintf( "Buttons:    %d\n", SDL_JoystickNumButtons(stick) );
-	Com_DPrintf( "Balls:      %d\n", SDL_JoystickNumBalls(stick) );
-	Com_DPrintf( "Use Analog: %s\n", in_joystickUseAnalog->integer ? "Yes" : "No" );
-	Com_DPrintf( "Threshold: %f\n", in_joystickThreshold->value );
-
-	SDL_JoystickEventState(SDL_QUERY);
+	SDL_GameControllerEventState(SDL_QUERY);
 }
 
 void IN_Init( void *windowData )
@@ -642,7 +680,7 @@ void IN_Init( void *windowData )
 	// joystick variables
 	in_keyboardDebug = Cvar_Get( "in_keyboardDebug", "0", CVAR_ARCHIVE );
 
-	in_joystick = Cvar_Get( "in_joystick", "1", CVAR_ARCHIVE|CVAR_LATCH );
+	in_joystick = Cvar_Get( "in_joystick", "1", CVAR_ARCHIVE );
 
 	// mouse variables
 	in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE );
@@ -964,229 +1002,80 @@ IN_JoyMove
 */
 static void IN_JoyMove( void )
 {
-	unsigned int axes = 0;
-	unsigned int hats = 0;
-	int total = 0;
 	int i = 0;
+	unsigned int axes = 0;
 
-	if (!stick)
+	if (!IN_CheckController())
 		return;
 
-	SDL_JoystickUpdate();
+	SDL_GameControllerUpdate();
 
-	// update the ball state.
-	total = SDL_JoystickNumBalls(stick);
-	if (total > 0)
+	// now query the controller buttons...
+	bool changed = false;
+	for (i = 0; i < MAX_SDL_BUTTON_MAP; i++)
 	{
-		int balldx = 0;
-		int balldy = 0;
-		for (i = 0; i < total; i++)
-		{
-			int dx = 0;
-			int dy = 0;
-			SDL_JoystickGetBall(stick, i, &dx, &dy);
-			balldx += dx;
-			balldy += dy;
-		}
-		if (balldx || balldy)
-		{
-			// !!! FIXME: is this good for stick balls, or just mice?
-			// Scale like the mouse input...
-			if (abs(balldx) > 1)
-				balldx *= 2;
-			if (abs(balldy) > 1)
-				balldy *= 2;
-			Sys_QueEvent( 0, SE_MOUSE, balldx, balldy, 0, NULL );
-		}
-	}
+		qboolean pressed = (qboolean)(SDL_GameControllerGetButton(controller, sdl_button[i]) != 0);
 
-	// now query the stick buttons...
-	total = SDL_JoystickNumButtons(stick);
-	if (total > 0)
+		if (pressed == stick_state.buttons[i])
+		{
+			continue;
+		}
+
+		stick_state.buttons[i] = pressed;
+		changed = true;
+
+		Sys_QueEvent( 0, SE_KEY, sdl_button_map[i], pressed, 0, NULL );
+	}
+	if (changed && in_joystickLogButtons->integer)
 	{
-		if (total > (int)ARRAY_LEN(stick_state.buttons))
-			total = ARRAY_LEN(stick_state.buttons);
-		bool changed = false;
-		for (i = 0; i < total; i++)
+		Com_Printf( " buttons " );
+		for (i = 0; i < MAX_SDL_BUTTON_MAP; i++)
 		{
-			qboolean pressed = (qboolean)(SDL_JoystickGetButton(stick, i) != 0);
-
-			if (pressed == stick_state.buttons[i])
-			{
-				continue;
-			}
-
-			stick_state.buttons[i] = pressed;
-			changed = true;
-
-			if (i < MAX_SDL_BUTTON_MAP)
-			{
-				Sys_QueEvent( 0, SE_KEY, sdl_button_map[i], pressed, 0, NULL );
-			}
+			Com_Printf( " %d", stick_state.buttons[i] );
 		}
-		if (changed && in_joystickLogButtons->integer)
-		{
-			Com_Printf( " buttons %d(%d) ", total, SDL_JoystickNumButtons(stick) );
-			for (i = 0; i < total; i++)
-			{
-				Com_Printf( " %d", SDL_JoystickGetButton(stick, i) );
-			}
-			Com_Printf( "\n" );
-		}
+		Com_Printf( "\n" );
 	}
-
-	// look at the hats...
-	total = SDL_JoystickNumHats(stick);
-	if (total > 0)
-	{
-		if (total > 4) total = 4;
-		for (i = 0; i < total; i++)
-		{
-			((Uint8 *)&hats)[i] = SDL_JoystickGetHat(stick, i);
-		}
-	}
-
-	// update hat state
-	if (hats != stick_state.oldhats)
-	{
-		if (in_joystickLogButtons->integer) Com_Printf( " hats " );
-		for( i = 0; i < 4; i++ ) {
-			if (in_joystickLogButtons->integer) Com_Printf( " %d", ((Uint8 *)&hats)[i] );
-			if( ((Uint8 *)&hats)[i] != ((Uint8 *)&stick_state.oldhats)[i] ) {
-				// release event
-				switch( ((Uint8 *)&stick_state.oldhats)[i] ) {
-					case SDL_HAT_UP:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 0], qfalse, 0, NULL );
-						break;
-					case SDL_HAT_RIGHT:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 1], qfalse, 0, NULL );
-						break;
-					case SDL_HAT_DOWN:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 2], qfalse, 0, NULL );
-						break;
-					case SDL_HAT_LEFT:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 3], qfalse, 0, NULL );
-						break;
-					case SDL_HAT_RIGHTUP:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 0], qfalse, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 1], qfalse, 0, NULL );
-						break;
-					case SDL_HAT_RIGHTDOWN:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 2], qfalse, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 1], qfalse, 0, NULL );
-						break;
-					case SDL_HAT_LEFTUP:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 0], qfalse, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 3], qfalse, 0, NULL );
-						break;
-					case SDL_HAT_LEFTDOWN:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 2], qfalse, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 3], qfalse, 0, NULL );
-						break;
-					default:
-						break;
-				}
-				// press event
-				switch( ((Uint8 *)&hats)[i] ) {
-					case SDL_HAT_UP:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 0], qtrue, 0, NULL );
-						break;
-					case SDL_HAT_RIGHT:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 1], qtrue, 0, NULL );
-						break;
-					case SDL_HAT_DOWN:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 2], qtrue, 0, NULL );
-						break;
-					case SDL_HAT_LEFT:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 3], qtrue, 0, NULL );
-						break;
-					case SDL_HAT_RIGHTUP:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 0], qtrue, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 1], qtrue, 0, NULL );
-						break;
-					case SDL_HAT_RIGHTDOWN:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 2], qtrue, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 1], qtrue, 0, NULL );
-						break;
-					case SDL_HAT_LEFTUP:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 0], qtrue, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 3], qtrue, 0, NULL );
-						break;
-					case SDL_HAT_LEFTDOWN:
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 2], qtrue, 0, NULL );
-						Sys_QueEvent( 0, SE_KEY, hat_keys[4*i + 3], qtrue, 0, NULL );
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		if (in_joystickLogButtons->integer) Com_Printf( "\n" );
-	}
-
-	// save hat state
-	stick_state.oldhats = hats;
 
 	// finally, look at the axes...
-	total = SDL_JoystickNumAxes(stick);
-	if (total > 0)
+	if (in_joystickLogAxis->integer) Com_Printf("joystick ");
+
+	int threshold = in_joystickThreshold->value * 32767;
+	int scale = 32767 - threshold;
+
+	for (i = 0; i < MAX_JOYSTICK_AXIS; i++)
 	{
-		if (in_joystickLogAxis->integer) Com_Printf("joystick ");
-		if (in_joystickUseAnalog->integer)
+		int axis = SDL_GameControllerGetAxis(controller, sdl_axis[i]);
+		if (in_joystickLogAxis->integer) Com_Printf(" %f", axis/32767.f);
+
+		// rescale from deadzone
+		if( axis < -threshold )
 		{
-			int threshold = in_joystickThreshold->value * 32767;
-			int scale = 32767 - threshold;
+			axis = (axis + threshold) * 32767 / scale;
+		}
+		else if(axis > threshold )
+		{
+			axis = (axis - threshold) * 32767 / scale;
+		}
+		else axis = 0;
 
-			if (total > MAX_JOYSTICK_AXIS) total = MAX_JOYSTICK_AXIS;
-			for (i = 0; i < total; i++)
-			{
-				int axis = SDL_JoystickGetAxis(stick, sdl_axis_map[i]);
-				if (in_joystickLogAxis->integer) Com_Printf(" %f", axis/32767.f);
+		if ( axis != stick_state.oldaaxes[i] )
+		{
+			Sys_QueEvent( 0, SE_JOYSTICK_AXIS, sdl_axis_map[i], axis, 0, NULL );
+			stick_state.oldaaxes[i] = axis;
+		}
 
-				// rescale from deadzone
-				if( axis < -threshold )
-				{
-					axis = (axis + threshold) * 32767 / scale;
-				}
-				else if(axis > threshold )
-				{
-					axis = (axis - threshold) * 32767 / scale;
-				}
-				else axis = 0;
-
-				if ( axis != stick_state.oldaaxes[i] )
-				{
-					Sys_QueEvent( 0, SE_JOYSTICK_AXIS, i, axis, 0, NULL );
-					stick_state.oldaaxes[i] = axis;
-				}
-
-				// button presses for triggers
-				if (i >= 4)
-				{
-					if( axis < 0 ) {
-						axes |= ( 1 << ( i * 2 ) );
-					} else {
-						axes |= ( 1 << ( ( i * 2 ) + 1 ) );
-					}
-				}
+		// button presses for triggers
+		if (i >= 4)
+		{
+			if( axis < 16000 ) {
+				axes |= ( 1 << ( i * 2 ) );
+			} else {
+				axes |= ( 1 << ( ( i * 2 ) + 1 ) );
 			}
 		}
-		else
-		{
-			if (total > 16) total = 16;
-			for (i = 0; i < total; i++)
-			{
-				Sint16 axis = SDL_JoystickGetAxis(stick, i);
-				float f = ( (float) axis ) / 32767.0f;
-				if( f < -in_joystickThreshold->value ) {
-					axes |= ( 1 << ( i * 2 ) );
-				} else if( f > in_joystickThreshold->value ) {
-					axes |= ( 1 << ( ( i * 2 ) + 1 ) );
-				}
-			}
-		}
-		if (in_joystickLogAxis->integer) Com_Printf("\n");
 	}
+
+	if (in_joystickLogAxis->integer) Com_Printf("\n");
 
 	/* Time to update axes state based on old vs. new. */
 	if (axes != stick_state.oldaxes)
@@ -1243,16 +1132,16 @@ IN_ShutdownJoystick
 */
 static void IN_ShutdownJoystick( void )
 {
-	if ( !SDL_WasInit( SDL_INIT_JOYSTICK ) )
+	if ( !SDL_WasInit( SDL_INIT_GAMECONTROLLER ) )
 		return;
 
-	if (stick)
+	if (controller)
 	{
-		SDL_JoystickClose(stick);
-		stick = NULL;
+		SDL_GameControllerClose(controller);
+		controller = NULL;
 	}
 
-	SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+	SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
 }
 
 void IN_Shutdown( void ) {

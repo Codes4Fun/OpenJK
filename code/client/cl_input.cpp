@@ -480,7 +480,7 @@ void CL_JoystickMouse( void )
 	}
 	// scale by time and scale down to original input of -127 to 127.
 	float scale =  cls.realFrametime * 0.001 * 127.f/32767.f;
-	// scale based upon joystick settings, and counter mouse scaling.
+	// scale based upon joystick settings
 	float scalex = scale * (cl_yawspeed->value / 100.0f);
 	float scaley = scale * (cl_pitchspeed->value / 100.0f);
 	// counteract mouse scale settings
@@ -492,22 +492,33 @@ void CL_JoystickMouse( void )
 	// compute mouse move deltas from joystick applying previous fractions
 	float fdx = cl.joystickAxis[AXIS_YAW] * scalex + fracx;
 	float fdy = cl.joystickAxis[AXIS_PITCH] * scaley + fracy;
+
+	if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
+		// UI needs to be a bit slower
+		fdx *= 0.75f;
+		fdy *= 0.75f;
+		// convert to integers
+		int dx = fdx;
+		int dy = fdy;
+		// capture the fraction for next time
+		fracx = fdx - dx;
+		fracy = fdy - dy;
+		// apply delta if there are any changes (using | is faster than ||)
+		if (dx | dy) {
+			_UI_MouseEvent( dx, dy );
+		}
+		return;
+	}
+
 	// convert to integers
 	int dx = fdx;
 	int dy = fdy;
 	// capture the fraction for next time
 	fracx = fdx - dx;
 	fracy = fdy - dy;
-	// apply delta if there are any changes (using | is faster than ||)
-	if (dx | dy) {
-		if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
-			_UI_MouseEvent( dx, dy );
-		}
-		else {
-			cl.mouseDx[cl.mouseIndex] += dx;
-			cl.mouseDy[cl.mouseIndex] += dy;
-		}
-	}
+
+	cl.mouseDx[cl.mouseIndex] += dx;
+	cl.mouseDy[cl.mouseIndex] += dy;
 }
 
 /*
