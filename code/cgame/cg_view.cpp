@@ -2018,6 +2018,22 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView ) {
 			CG_DrawMiscEnts();
 		}
 
+		// Don't draw the in-view weapon when in camera mode
+		if ( !in_camera
+			&& !cg_pano.integer
+			&& cg.snap->ps.weapon != WP_SABER
+			&& ( cg.snap->ps.viewEntity == 0 || cg.snap->ps.viewEntity >= ENTITYNUM_WORLD ) )
+		{
+			CG_AddViewWeapon( &cg.predicted_player_state );
+		}
+		else if( cg.snap->ps.viewEntity != 0 && cg.snap->ps.viewEntity < ENTITYNUM_WORLD )
+		{
+			if( g_entities[cg.snap->ps.viewEntity].client && g_entities[cg.snap->ps.viewEntity].NPC )
+			{
+				CG_AddViewWeapon( &g_entities[cg.snap->ps.viewEntity ].client->ps );	// HAX - because I wanted to --eez
+			}
+		}
+
 		if ( !cg.hyperspace && fx_freeze.integer<2 ) 
 		{
 			//Add all effects
