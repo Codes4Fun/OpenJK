@@ -427,3 +427,536 @@ extern PFNGLISPROGRAMARBPROC qglIsProgramARB;
 
 extern PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
 extern PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
+
+
+#define QGLDECLARE(x) extern PFN##x##PROC q##x
+#define QGLDEFINE(x) PFN##x##PROC q##x
+#define QGLGETPROC(x) q##x## = (PFN##x##PROC)ri.GL_GetProcAddress(#x)
+
+// GL_ARB_framebuffer_object
+#define GL_FRAMEBUFFER                    0x8D40
+#define GL_FRAMEBUFFER_BINDING            0x8CA6
+#define GL_DEPTH_COMPONENT24              0x81A6
+#define GL_COLOR_ATTACHMENT0              0x8CE0
+#define GL_DEPTH_ATTACHMENT               0x8D00
+#define GL_FRAMEBUFFER_COMPLETE           0x8CD5
+#define GL_ARRAY_BUFFER                   0x8892
+#define GL_ELEMENT_ARRAY_BUFFER           0x8893
+typedef GLboolean (APIENTRY * PFNglIsRenderbufferPROC) (GLuint renderbuffer);
+typedef GLvoid (APIENTRY * PFNglBindRenderbufferPROC) (GLenum target, GLuint renderbuffer);
+typedef GLvoid (APIENTRY * PFNglDeleteRenderbuffersPROC) (GLsizei n, const GLuint *renderbuffers);
+typedef GLvoid (APIENTRY * PFNglGenRenderbuffersPROC) (GLsizei n, GLuint *renderbuffers);
+typedef GLvoid (APIENTRY * PFNglRenderbufferStoragePROC) (GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+typedef GLvoid (APIENTRY * PFNglRenderbufferStorageMultisamplePROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
+typedef GLvoid (APIENTRY * PFNglGetRenderbufferParameterivPROC) (GLenum target, GLenum pname, GLint *params);
+typedef GLboolean (APIENTRY * PFNglIsFramebufferPROC) (GLuint framebuffer);
+typedef GLvoid (APIENTRY * PFNglBindFramebufferPROC) (GLenum target, GLuint framebuffer);
+typedef GLvoid (APIENTRY * PFNglDeleteFramebuffersPROC) (GLsizei n, const GLuint *framebuffers);
+typedef GLvoid (APIENTRY * PFNglGenFramebuffersPROC) (GLsizei n, GLuint *framebuffers);
+typedef GLenum (APIENTRY * PFNglCheckFramebufferStatusPROC) (GLenum target);
+typedef GLvoid (APIENTRY * PFNglFramebufferTexture1DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef GLvoid (APIENTRY * PFNglFramebufferTexture2DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef GLvoid (APIENTRY * PFNglFramebufferTexture3DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint layer);
+typedef GLvoid (APIENTRY * PFNglFramebufferTextureLayerPROC) (GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
+typedef GLvoid (APIENTRY * PFNglFramebufferRenderbufferPROC) (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+typedef GLvoid (APIENTRY * PFNglGetFramebufferAttachmentParameterivPROC) (GLenum target, GLenum attachment, GLenum pname, GLint *params);
+typedef GLvoid (APIENTRY * PFNglBlitFramebufferPROC) (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+typedef GLvoid (APIENTRY * PFNglGenerateMipmapPROC) (GLenum target);
+typedef GLvoid (APIENTRY * PFNglBindBufferPROC) (GLenum target, GLuint buffer);
+
+QGLDECLARE(glIsRenderbuffer);
+QGLDECLARE(glBindRenderbuffer);
+QGLDECLARE(glDeleteRenderbuffers);
+QGLDECLARE(glGenRenderbuffers);
+QGLDECLARE(glRenderbufferStorage);
+QGLDECLARE(glRenderbufferStorageMultisample);
+QGLDECLARE(glGetRenderbufferParameteriv);
+QGLDECLARE(glIsFramebuffer);
+QGLDECLARE(glBindFramebuffer);
+QGLDECLARE(glDeleteFramebuffers);
+QGLDECLARE(glGenFramebuffers);
+QGLDECLARE(glCheckFramebufferStatus);
+QGLDECLARE(glFramebufferTexture1D);
+QGLDECLARE(glFramebufferTexture2D);
+QGLDECLARE(glFramebufferTexture3D);
+QGLDECLARE(glFramebufferTextureLayer);
+QGLDECLARE(glFramebufferRenderbuffer);
+QGLDECLARE(glGetFramebufferAttachmentParameteriv);
+QGLDECLARE(glBlitFramebuffer);
+QGLDECLARE(glGenerateMipmap);
+QGLDECLARE(glBindBuffer);
+
+// OpenGL 2.0
+
+#define PFNglBlendEquationSeparatePROC PFNGLBLENDEQUATIONSEPARATEPROC
+#define PFNglDrawBuffersPROC PFNGLDRAWBUFFERSPROC
+#define PFNglStencilOpSeparatePROC PFNGLSTENCILOPSEPARATEPROC
+#define PFNglStencilFuncSeparatePROC PFNGLSTENCILFUNCSEPARATEPROC
+#define PFNglStencilMaskSeparatePROC PFNGLSTENCILMASKSEPARATEPROC
+#define PFNglAttachShaderPROC PFNGLATTACHSHADERPROC
+#define PFNglBindAttribLocationPROC PFNGLBINDATTRIBLOCATIONPROC
+#define PFNglCompileShaderPROC PFNGLCOMPILESHADERPROC
+#define PFNglCreateProgramPROC PFNGLCREATEPROGRAMPROC
+#define PFNglCreateShaderPROC PFNGLCREATESHADERPROC
+#define PFNglDeleteProgramPROC PFNGLDELETEPROGRAMPROC
+#define PFNglDeleteShaderPROC PFNGLDELETESHADERPROC
+#define PFNglDetachShaderPROC PFNGLDETACHSHADERPROC
+#define PFNglDisableVertexAttribArrayPROC PFNGLDISABLEVERTEXATTRIBARRAYPROC
+#define PFNglEnableVertexAttribArrayPROC PFNGLENABLEVERTEXATTRIBARRAYPROC
+#define PFNglGetActiveAttribPROC PFNGLGETACTIVEATTRIBPROC
+#define PFNglGetActiveUniformPROC PFNGLGETACTIVEUNIFORMPROC
+#define PFNglGetAttachedShadersPROC PFNGLGETATTACHEDSHADERSPROC
+#define PFNglGetAttribLocationPROC PFNGLGETATTRIBLOCATIONPROC
+#define PFNglGetProgramivPROC PFNGLGETPROGRAMIVPROC
+#define PFNglGetProgramInfoLogPROC PFNGLGETPROGRAMINFOLOGPROC
+#define PFNglGetShaderivPROC PFNGLGETSHADERIVPROC
+#define PFNglGetShaderInfoLogPROC PFNGLGETSHADERINFOLOGPROC
+#define PFNglGetShaderSourcePROC PFNGLGETSHADERSOURCEPROC
+#define PFNglGetUniformLocationPROC PFNGLGETUNIFORMLOCATIONPROC
+#define PFNglGetUniformfvPROC PFNGLGETUNIFORMFVPROC
+#define PFNglGetUniformivPROC PFNGLGETUNIFORMIVPROC
+#define PFNglGetVertexAttribdvPROC PFNGLGETVERTEXATTRIBDVPROC
+#define PFNglGetVertexAttribfvPROC PFNGLGETVERTEXATTRIBFVPROC
+#define PFNglGetVertexAttribivPROC PFNGLGETVERTEXATTRIBIVPROC
+#define PFNglGetVertexAttribPointervPROC PFNGLGETVERTEXATTRIBPOINTERVPROC
+#define PFNglIsProgramPROC PFNGLISPROGRAMPROC
+#define PFNglIsShaderPROC PFNGLISSHADERPROC
+#define PFNglLinkProgramPROC PFNGLLINKPROGRAMPROC
+#define PFNglShaderSourcePROC PFNGLSHADERSOURCEPROC
+#define PFNglUseProgramPROC PFNGLUSEPROGRAMPROC
+#define PFNglUniform1fPROC PFNGLUNIFORM1FPROC
+#define PFNglUniform2fPROC PFNGLUNIFORM2FPROC
+#define PFNglUniform3fPROC PFNGLUNIFORM3FPROC
+#define PFNglUniform4fPROC PFNGLUNIFORM4FPROC
+#define PFNglUniform1iPROC PFNGLUNIFORM1IPROC
+#define PFNglUniform2iPROC PFNGLUNIFORM2IPROC
+#define PFNglUniform3iPROC PFNGLUNIFORM3IPROC
+#define PFNglUniform4iPROC PFNGLUNIFORM4IPROC
+#define PFNglUniform1fvPROC PFNGLUNIFORM1FVPROC
+#define PFNglUniform2fvPROC PFNGLUNIFORM2FVPROC
+#define PFNglUniform3fvPROC PFNGLUNIFORM3FVPROC
+#define PFNglUniform4fvPROC PFNGLUNIFORM4FVPROC
+#define PFNglUniform1ivPROC PFNGLUNIFORM1IVPROC
+#define PFNglUniform2ivPROC PFNGLUNIFORM2IVPROC
+#define PFNglUniform3ivPROC PFNGLUNIFORM3IVPROC
+#define PFNglUniform4ivPROC PFNGLUNIFORM4IVPROC
+#define PFNglUniformMatrix2fvPROC PFNGLUNIFORMMATRIX2FVPROC
+#define PFNglUniformMatrix3fvPROC PFNGLUNIFORMMATRIX3FVPROC
+#define PFNglUniformMatrix4fvPROC PFNGLUNIFORMMATRIX4FVPROC
+#define PFNglValidateProgramPROC PFNGLVALIDATEPROGRAMPROC
+#define PFNglVertexAttrib1dPROC PFNGLVERTEXATTRIB1DPROC
+#define PFNglVertexAttrib1dvPROC PFNGLVERTEXATTRIB1DVPROC
+#define PFNglVertexAttrib1fPROC PFNGLVERTEXATTRIB1FPROC
+#define PFNglVertexAttrib1fvPROC PFNGLVERTEXATTRIB1FVPROC
+#define PFNglVertexAttrib1sPROC PFNGLVERTEXATTRIB1SPROC
+#define PFNglVertexAttrib1svPROC PFNGLVERTEXATTRIB1SVPROC
+#define PFNglVertexAttrib2dPROC PFNGLVERTEXATTRIB2DPROC
+#define PFNglVertexAttrib2dvPROC PFNGLVERTEXATTRIB2DVPROC
+#define PFNglVertexAttrib2fPROC PFNGLVERTEXATTRIB2FPROC
+#define PFNglVertexAttrib2fvPROC PFNGLVERTEXATTRIB2FVPROC
+#define PFNglVertexAttrib2sPROC PFNGLVERTEXATTRIB2SPROC
+#define PFNglVertexAttrib2svPROC PFNGLVERTEXATTRIB2SVPROC
+#define PFNglVertexAttrib3dPROC PFNGLVERTEXATTRIB3DPROC
+#define PFNglVertexAttrib3dvPROC PFNGLVERTEXATTRIB3DVPROC
+#define PFNglVertexAttrib3fPROC PFNGLVERTEXATTRIB3FPROC
+#define PFNglVertexAttrib3fvPROC PFNGLVERTEXATTRIB3FVPROC
+#define PFNglVertexAttrib3sPROC PFNGLVERTEXATTRIB3SPROC
+#define PFNglVertexAttrib3svPROC PFNGLVERTEXATTRIB3SVPROC
+#define PFNglVertexAttrib4NbvPROC PFNGLVERTEXATTRIB4NBVPROC
+#define PFNglVertexAttrib4NivPROC PFNGLVERTEXATTRIB4NIVPROC
+#define PFNglVertexAttrib4NsvPROC PFNGLVERTEXATTRIB4NSVPROC
+#define PFNglVertexAttrib4NubPROC PFNGLVERTEXATTRIB4NUBPROC
+#define PFNglVertexAttrib4NubvPROC PFNGLVERTEXATTRIB4NUBVPROC
+#define PFNglVertexAttrib4NuivPROC PFNGLVERTEXATTRIB4NUIVPROC
+#define PFNglVertexAttrib4NusvPROC PFNGLVERTEXATTRIB4NUSVPROC
+#define PFNglVertexAttrib4bvPROC PFNGLVERTEXATTRIB4BVPROC
+#define PFNglVertexAttrib4dPROC PFNGLVERTEXATTRIB4DPROC
+#define PFNglVertexAttrib4dvPROC PFNGLVERTEXATTRIB4DVPROC
+#define PFNglVertexAttrib4fPROC PFNGLVERTEXATTRIB4FPROC
+#define PFNglVertexAttrib4fvPROC PFNGLVERTEXATTRIB4FVPROC
+#define PFNglVertexAttrib4ivPROC PFNGLVERTEXATTRIB4IVPROC
+#define PFNglVertexAttrib4sPROC PFNGLVERTEXATTRIB4SPROC
+#define PFNglVertexAttrib4svPROC PFNGLVERTEXATTRIB4SVPROC
+#define PFNglVertexAttrib4ubvPROC PFNGLVERTEXATTRIB4UBVPROC
+#define PFNglVertexAttrib4uivPROC PFNGLVERTEXATTRIB4UIVPROC
+#define PFNglVertexAttrib4usvPROC PFNGLVERTEXATTRIB4USVPROC
+#define PFNglVertexAttribPointerPROC PFNGLVERTEXATTRIBPOINTERPROC
+
+QGLDECLARE(glBlendEquationSeparate);
+QGLDECLARE(glDrawBuffers);
+QGLDECLARE(glStencilOpSeparate);
+QGLDECLARE(glStencilFuncSeparate);
+QGLDECLARE(glStencilMaskSeparate);
+QGLDECLARE(glAttachShader);
+QGLDECLARE(glBindAttribLocation);
+QGLDECLARE(glCompileShader);
+QGLDECLARE(glCreateProgram);
+QGLDECLARE(glCreateShader);
+QGLDECLARE(glDeleteProgram);
+QGLDECLARE(glDeleteShader);
+QGLDECLARE(glDetachShader);
+QGLDECLARE(glDisableVertexAttribArray);
+QGLDECLARE(glEnableVertexAttribArray);
+QGLDECLARE(glGetActiveAttrib);
+QGLDECLARE(glGetActiveUniform);
+QGLDECLARE(glGetAttachedShaders);
+QGLDECLARE(glGetAttribLocation);
+QGLDECLARE(glGetProgramiv);
+QGLDECLARE(glGetProgramInfoLog);
+QGLDECLARE(glGetShaderiv);
+QGLDECLARE(glGetShaderInfoLog);
+QGLDECLARE(glGetShaderSource);
+QGLDECLARE(glGetUniformLocation);
+QGLDECLARE(glGetUniformfv);
+QGLDECLARE(glGetUniformiv);
+QGLDECLARE(glGetVertexAttribdv);
+QGLDECLARE(glGetVertexAttribfv);
+QGLDECLARE(glGetVertexAttribiv);
+QGLDECLARE(glGetVertexAttribPointerv);
+QGLDECLARE(glIsProgram);
+QGLDECLARE(glIsShader);
+QGLDECLARE(glLinkProgram);
+QGLDECLARE(glShaderSource);
+QGLDECLARE(glUseProgram);
+QGLDECLARE(glUniform1f);
+QGLDECLARE(glUniform2f);
+QGLDECLARE(glUniform3f);
+QGLDECLARE(glUniform4f);
+QGLDECLARE(glUniform1i);
+QGLDECLARE(glUniform2i);
+QGLDECLARE(glUniform3i);
+QGLDECLARE(glUniform4i);
+QGLDECLARE(glUniform1fv);
+QGLDECLARE(glUniform2fv);
+QGLDECLARE(glUniform3fv);
+QGLDECLARE(glUniform4fv);
+QGLDECLARE(glUniform1iv);
+QGLDECLARE(glUniform2iv);
+QGLDECLARE(glUniform3iv);
+QGLDECLARE(glUniform4iv);
+QGLDECLARE(glUniformMatrix2fv);
+QGLDECLARE(glUniformMatrix3fv);
+QGLDECLARE(glUniformMatrix4fv);
+QGLDECLARE(glValidateProgram);
+QGLDECLARE(glVertexAttrib1d);
+QGLDECLARE(glVertexAttrib1dv);
+QGLDECLARE(glVertexAttrib1f);
+QGLDECLARE(glVertexAttrib1fv);
+QGLDECLARE(glVertexAttrib1s);
+QGLDECLARE(glVertexAttrib1sv);
+QGLDECLARE(glVertexAttrib2d);
+QGLDECLARE(glVertexAttrib2dv);
+QGLDECLARE(glVertexAttrib2f);
+QGLDECLARE(glVertexAttrib2fv);
+QGLDECLARE(glVertexAttrib2s);
+QGLDECLARE(glVertexAttrib2sv);
+QGLDECLARE(glVertexAttrib3d);
+QGLDECLARE(glVertexAttrib3dv);
+QGLDECLARE(glVertexAttrib3f);
+QGLDECLARE(glVertexAttrib3fv);
+QGLDECLARE(glVertexAttrib3s);
+QGLDECLARE(glVertexAttrib3sv);
+QGLDECLARE(glVertexAttrib4Nbv);
+QGLDECLARE(glVertexAttrib4Niv);
+QGLDECLARE(glVertexAttrib4Nsv);
+QGLDECLARE(glVertexAttrib4Nub);
+QGLDECLARE(glVertexAttrib4Nubv);
+QGLDECLARE(glVertexAttrib4Nuiv);
+QGLDECLARE(glVertexAttrib4Nusv);
+QGLDECLARE(glVertexAttrib4bv);
+QGLDECLARE(glVertexAttrib4d);
+QGLDECLARE(glVertexAttrib4dv);
+QGLDECLARE(glVertexAttrib4f);
+QGLDECLARE(glVertexAttrib4fv);
+QGLDECLARE(glVertexAttrib4iv);
+QGLDECLARE(glVertexAttrib4s);
+QGLDECLARE(glVertexAttrib4sv);
+QGLDECLARE(glVertexAttrib4ubv);
+QGLDECLARE(glVertexAttrib4uiv);
+QGLDECLARE(glVertexAttrib4usv);
+QGLDECLARE(glVertexAttribPointer);
+
+
+#if 0
+typedef void (APIENTRY * PFNglBlendEquationSeparatePROC) (GLenum modeRGB, GLenum modeAlpha);
+typedef void (APIENTRY * PFNglDrawBuffersPROC) (GLsizei n, const GLenum *bufs);
+typedef void (APIENTRY * PFNglStencilOpSeparatePROC) (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass);
+typedef void (APIENTRY * PFNglStencilFuncSeparatePROC) (GLenum face, GLenum func, GLint ref, GLuint mask);
+typedef void (APIENTRY * PFNglStencilMaskSeparatePROC) (GLenum face, GLuint mask);
+typedef void (APIENTRY * PFNglAttachShaderPROC) (GLuint program, GLuint shader);
+typedef void (APIENTRY * PFNglBindAttribLocationPROC) (GLuint program, GLuint index, const GLchar *name);
+typedef void (APIENTRY * PFNglCompileShaderPROC) (GLuint shader);
+typedef GLuint (APIENTRY * PFNglCreateProgramPROC) (void);
+typedef GLuint (APIENTRY * PFNglCreateShaderPROC) (GLenum type);
+typedef void (APIENTRY * PFNglDeleteProgramPROC) (GLuint program);
+typedef void (APIENTRY * PFNglDeleteShaderPROC) (GLuint shader);
+typedef void (APIENTRY * PFNglDetachShaderPROC) (GLuint program, GLuint shader);
+typedef void (APIENTRY * PFNglDisableVertexAttribArrayPROC) (GLuint index);
+typedef void (APIENTRY * PFNglEnableVertexAttribArrayPROC) (GLuint index);
+typedef void (APIENTRY * PFNglGetActiveAttribPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+typedef void (APIENTRY * PFNglGetActiveUniformPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+typedef void (APIENTRY * PFNglGetAttachedShadersPROC) (GLuint program, GLsizei maxCount, GLsizei *count, GLuint *shaders);
+typedef GLint (APIENTRY * PFNglGetAttribLocationPROC) (GLuint program, const GLchar *name);
+typedef void (APIENTRY * PFNglGetProgramivPROC) (GLuint program, GLenum pname, GLint *params);
+typedef void (APIENTRY * PFNglGetProgramInfoLogPROC) (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+typedef void (APIENTRY * PFNglGetShaderivPROC) (GLuint shader, GLenum pname, GLint *params);
+typedef void (APIENTRY * PFNglGetShaderInfoLogPROC) (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+typedef void (APIENTRY * PFNglGetShaderSourcePROC) (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source);
+typedef GLint (APIENTRY * PFNglGetUniformLocationPROC) (GLuint program, const GLchar *name);
+typedef void (APIENTRY * PFNglGetUniformfvPROC) (GLuint program, GLint location, GLfloat *params);
+typedef void (APIENTRY * PFNglGetUniformivPROC) (GLuint program, GLint location, GLint *params);
+typedef void (APIENTRY * PFNglGetVertexAttribdvPROC) (GLuint index, GLenum pname, GLdouble *params);
+typedef void (APIENTRY * PFNglGetVertexAttribfvPROC) (GLuint index, GLenum pname, GLfloat *params);
+typedef void (APIENTRY * PFNglGetVertexAttribivPROC) (GLuint index, GLenum pname, GLint *params);
+typedef void (APIENTRY * PFNglGetVertexAttribPointervPROC) (GLuint index, GLenum pname, void **pointer);
+typedef GLboolean (APIENTRY * PFNglIsProgramPROC) (GLuint program);
+typedef GLboolean (APIENTRY * PFNglIsShaderPROC) (GLuint shader);
+typedef void (APIENTRY * PFNglLinkProgramPROC) (GLuint program);
+typedef void (APIENTRY * PFNglShaderSourcePROC) (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
+typedef void (APIENTRY * PFNglUseProgramPROC) (GLuint program);
+typedef void (APIENTRY * PFNglUniform1fPROC) (GLint location, GLfloat v0);
+typedef void (APIENTRY * PFNglUniform2fPROC) (GLint location, GLfloat v0, GLfloat v1);
+typedef void (APIENTRY * PFNglUniform3fPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+typedef void (APIENTRY * PFNglUniform4fPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+typedef void (APIENTRY * PFNglUniform1iPROC) (GLint location, GLint v0);
+typedef void (APIENTRY * PFNglUniform2iPROC) (GLint location, GLint v0, GLint v1);
+typedef void (APIENTRY * PFNglUniform3iPROC) (GLint location, GLint v0, GLint v1, GLint v2);
+typedef void (APIENTRY * PFNglUniform4iPROC) (GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
+typedef void (APIENTRY * PFNglUniform1fvPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRY * PFNglUniform2fvPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRY * PFNglUniform3fvPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRY * PFNglUniform4fvPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRY * PFNglUniform1ivPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRY * PFNglUniform2ivPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRY * PFNglUniform3ivPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRY * PFNglUniform4ivPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRY * PFNglUniformMatrix2fvPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+typedef void (APIENTRY * PFNglUniformMatrix3fvPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+typedef void (APIENTRY * PFNglUniformMatrix4fvPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+typedef void (APIENTRY * PFNglValidateProgramPROC) (GLuint program);
+typedef void (APIENTRY * PFNglVertexAttrib1dPROC) (GLuint index, GLdouble x);
+typedef void (APIENTRY * PFNglVertexAttrib1dvPROC) (GLuint index, const GLdouble *v);
+typedef void (APIENTRY * PFNglVertexAttrib1fPROC) (GLuint index, GLfloat x);
+typedef void (APIENTRY * PFNglVertexAttrib1fvPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRY * PFNglVertexAttrib1sPROC) (GLuint index, GLshort x);
+typedef void (APIENTRY * PFNglVertexAttrib1svPROC) (GLuint index, const GLshort *v);
+typedef void (APIENTRY * PFNglVertexAttrib2dPROC) (GLuint index, GLdouble x, GLdouble y);
+typedef void (APIENTRY * PFNglVertexAttrib2dvPROC) (GLuint index, const GLdouble *v);
+typedef void (APIENTRY * PFNglVertexAttrib2fPROC) (GLuint index, GLfloat x, GLfloat y);
+typedef void (APIENTRY * PFNglVertexAttrib2fvPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRY * PFNglVertexAttrib2sPROC) (GLuint index, GLshort x, GLshort y);
+typedef void (APIENTRY * PFNglVertexAttrib2svPROC) (GLuint index, const GLshort *v);
+typedef void (APIENTRY * PFNglVertexAttrib3dPROC) (GLuint index, GLdouble x, GLdouble y, GLdouble z);
+typedef void (APIENTRY * PFNglVertexAttrib3dvPROC) (GLuint index, const GLdouble *v);
+typedef void (APIENTRY * PFNglVertexAttrib3fPROC) (GLuint index, GLfloat x, GLfloat y, GLfloat z);
+typedef void (APIENTRY * PFNglVertexAttrib3fvPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRY * PFNglVertexAttrib3sPROC) (GLuint index, GLshort x, GLshort y, GLshort z);
+typedef void (APIENTRY * PFNglVertexAttrib3svPROC) (GLuint index, const GLshort *v);
+typedef void (APIENTRY * PFNglVertexAttrib4NbvPROC) (GLuint index, const GLbyte *v);
+typedef void (APIENTRY * PFNglVertexAttrib4NivPROC) (GLuint index, const GLint *v);
+typedef void (APIENTRY * PFNglVertexAttrib4NsvPROC) (GLuint index, const GLshort *v);
+typedef void (APIENTRY * PFNglVertexAttrib4NubPROC) (GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w);
+typedef void (APIENTRY * PFNglVertexAttrib4NubvPROC) (GLuint index, const GLubyte *v);
+typedef void (APIENTRY * PFNglVertexAttrib4NuivPROC) (GLuint index, const GLuint *v);
+typedef void (APIENTRY * PFNglVertexAttrib4NusvPROC) (GLuint index, const GLushort *v);
+typedef void (APIENTRY * PFNglVertexAttrib4bvPROC) (GLuint index, const GLbyte *v);
+typedef void (APIENTRY * PFNglVertexAttrib4dPROC) (GLuint index, GLdouble x, GLdouble y, GLdouble z, GLdouble w);
+typedef void (APIENTRY * PFNglVertexAttrib4dvPROC) (GLuint index, const GLdouble *v);
+typedef void (APIENTRY * PFNglVertexAttrib4fPROC) (GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w);
+typedef void (APIENTRY * PFNglVertexAttrib4fvPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRY * PFNglVertexAttrib4ivPROC) (GLuint index, const GLint *v);
+typedef void (APIENTRY * PFNglVertexAttrib4sPROC) (GLuint index, GLshort x, GLshort y, GLshort z, GLshort w);
+typedef void (APIENTRY * PFNglVertexAttrib4svPROC) (GLuint index, const GLshort *v);
+typedef void (APIENTRY * PFNglVertexAttrib4ubvPROC) (GLuint index, const GLubyte *v);
+typedef void (APIENTRY * PFNglVertexAttrib4uivPROC) (GLuint index, const GLuint *v);
+typedef void (APIENTRY * PFNglVertexAttrib4usvPROC) (GLuint index, const GLushort *v);
+typedef void (APIENTRY * PFNglVertexAttribPointerPROC) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
+#endif
+
+// OpenGL 2.1
+
+#define PFNglUniformMatrix2x3fvPROC PFNGLUNIFORMMATRIX2X3FVPROC
+#define PFNglUniformMatrix3x2fvPROC PFNGLUNIFORMMATRIX3X2FVPROC
+#define PFNglUniformMatrix2x4fvPROC PFNGLUNIFORMMATRIX2X4FVPROC
+#define PFNglUniformMatrix4x2fvPROC PFNGLUNIFORMMATRIX4X2FVPROC
+#define PFNglUniformMatrix3x4fvPROC PFNGLUNIFORMMATRIX3X4FVPROC
+#define PFNglUniformMatrix4x3fvPROC PFNGLUNIFORMMATRIX4X3FVPROC
+
+QGLDECLARE(glUniformMatrix2x3fv);
+QGLDECLARE(glUniformMatrix3x2fv);
+QGLDECLARE(glUniformMatrix2x4fv);
+QGLDECLARE(glUniformMatrix4x2fv);
+QGLDECLARE(glUniformMatrix3x4fv);
+QGLDECLARE(glUniformMatrix4x3fv);
+
+// OpenGL 3.0
+
+#define PFNglColorMaskiPROC PFNGLCOLORMASKIPROC
+#define PFNglGetBooleani_vPROC PFNGLGETBOOLEANI_VPROC
+#define PFNglGetIntegeri_vPROC PFNGLGETINTEGERI_VPROC
+#define PFNglEnableiPROC PFNGLENABLEIPROC
+#define PFNglDisableiPROC PFNGLDISABLEIPROC
+#define PFNglIsEnablediPROC PFNGLISENABLEDIPROC
+#define PFNglBeginTransformFeedbackPROC PFNGLBEGINTRANSFORMFEEDBACKPROC
+#define PFNglEndTransformFeedbackPROC PFNGLENDTRANSFORMFEEDBACKPROC
+#define PFNglBindBufferRangePROC PFNGLBINDBUFFERRANGEPROC
+#define PFNglBindBufferBasePROC PFNGLBINDBUFFERBASEPROC
+#define PFNglTransformFeedbackVaryingsPROC PFNGLTRANSFORMFEEDBACKVARYINGSPROC
+#define PFNglGetTransformFeedbackVaryingPROC PFNGLGETTRANSFORMFEEDBACKVARYINGPROC
+#define PFNglClampColorPROC PFNGLCLAMPCOLORPROC
+#define PFNglBeginConditionalRenderPROC PFNGLBEGINCONDITIONALRENDERPROC
+#define PFNglEndConditionalRenderPROC PFNGLENDCONDITIONALRENDERPROC
+#define PFNglVertexAttribIPointerPROC PFNGLVERTEXATTRIBIPOINTERPROC
+#define PFNglGetVertexAttribIivPROC PFNGLGETVERTEXATTRIBIIVPROC
+#define PFNglGetVertexAttribIuivPROC PFNGLGETVERTEXATTRIBIUIVPROC
+#define PFNglVertexAttribI1iPROC PFNGLVERTEXATTRIBI1IPROC
+#define PFNglVertexAttribI2iPROC PFNGLVERTEXATTRIBI2IPROC
+#define PFNglVertexAttribI3iPROC PFNGLVERTEXATTRIBI3IPROC
+#define PFNglVertexAttribI4iPROC PFNGLVERTEXATTRIBI4IPROC
+#define PFNglVertexAttribI1uiPROC PFNGLVERTEXATTRIBI1UIPROC
+#define PFNglVertexAttribI2uiPROC PFNGLVERTEXATTRIBI2UIPROC
+#define PFNglVertexAttribI3uiPROC PFNGLVERTEXATTRIBI3UIPROC
+#define PFNglVertexAttribI4uiPROC PFNGLVERTEXATTRIBI4UIPROC
+#define PFNglVertexAttribI1ivPROC PFNGLVERTEXATTRIBI1IVPROC
+#define PFNglVertexAttribI2ivPROC PFNGLVERTEXATTRIBI2IVPROC
+#define PFNglVertexAttribI3ivPROC PFNGLVERTEXATTRIBI3IVPROC
+#define PFNglVertexAttribI4ivPROC PFNGLVERTEXATTRIBI4IVPROC
+#define PFNglVertexAttribI1uivPROC PFNGLVERTEXATTRIBI1UIVPROC
+#define PFNglVertexAttribI2uivPROC PFNGLVERTEXATTRIBI2UIVPROC
+#define PFNglVertexAttribI3uivPROC PFNGLVERTEXATTRIBI3UIVPROC
+#define PFNglVertexAttribI4uivPROC PFNGLVERTEXATTRIBI4UIVPROC
+#define PFNglVertexAttribI4bvPROC PFNGLVERTEXATTRIBI4BVPROC
+#define PFNglVertexAttribI4svPROC PFNGLVERTEXATTRIBI4SVPROC
+#define PFNglVertexAttribI4ubvPROC PFNGLVERTEXATTRIBI4UBVPROC
+#define PFNglVertexAttribI4usvPROC PFNGLVERTEXATTRIBI4USVPROC
+#define PFNglGetUniformuivPROC PFNGLGETUNIFORMUIVPROC
+#define PFNglBindFragDataLocationPROC PFNGLBINDFRAGDATALOCATIONPROC
+#define PFNglGetFragDataLocationPROC PFNGLGETFRAGDATALOCATIONPROC
+#define PFNglUniform1uiPROC PFNGLUNIFORM1UIPROC
+#define PFNglUniform2uiPROC PFNGLUNIFORM2UIPROC
+#define PFNglUniform3uiPROC PFNGLUNIFORM3UIPROC
+#define PFNglUniform4uiPROC PFNGLUNIFORM4UIPROC
+#define PFNglUniform1uivPROC PFNGLUNIFORM1UIVPROC
+#define PFNglUniform2uivPROC PFNGLUNIFORM2UIVPROC
+#define PFNglUniform3uivPROC PFNGLUNIFORM3UIVPROC
+#define PFNglUniform4uivPROC PFNGLUNIFORM4UIVPROC
+#define PFNglTexParameterIivPROC PFNGLTEXPARAMETERIIVPROC
+#define PFNglTexParameterIuivPROC PFNGLTEXPARAMETERIUIVPROC
+#define PFNglGetTexParameterIivPROC PFNGLGETTEXPARAMETERIIVPROC
+#define PFNglGetTexParameterIuivPROC PFNGLGETTEXPARAMETERIUIVPROC
+#define PFNglClearBufferivPROC PFNGLCLEARBUFFERIVPROC
+#define PFNglClearBufferuivPROC PFNGLCLEARBUFFERUIVPROC
+#define PFNglClearBufferfvPROC PFNGLCLEARBUFFERFVPROC
+#define PFNglClearBufferfiPROC PFNGLCLEARBUFFERFIPROC
+#define PFNglGetStringiPROC PFNGLGETSTRINGIPROC
+#define PFNglIsRenderbufferPROC PFNGLISRENDERBUFFERPROC
+#define PFNglBindRenderbufferPROC PFNGLBINDRENDERBUFFERPROC
+#define PFNglDeleteRenderbuffersPROC PFNGLDELETERENDERBUFFERSPROC
+#define PFNglGenRenderbuffersPROC PFNGLGENRENDERBUFFERSPROC
+#define PFNglRenderbufferStoragePROC PFNGLRENDERBUFFERSTORAGEPROC
+#define PFNglGetRenderbufferParameterivPROC PFNGLGETRENDERBUFFERPARAMETERIVPROC
+#define PFNglIsFramebufferPROC PFNGLISFRAMEBUFFERPROC
+#define PFNglBindFramebufferPROC PFNGLBINDFRAMEBUFFERPROC
+#define PFNglDeleteFramebuffersPROC PFNGLDELETEFRAMEBUFFERSPROC
+#define PFNglGenFramebuffersPROC PFNGLGENFRAMEBUFFERSPROC
+#define PFNglCheckFramebufferStatusPROC PFNGLCHECKFRAMEBUFFERSTATUSPROC
+#define PFNglFramebufferTexture1DPROC PFNGLFRAMEBUFFERTEXTURE1DPROC
+#define PFNglFramebufferTexture2DPROC PFNGLFRAMEBUFFERTEXTURE2DPROC
+#define PFNglFramebufferTexture3DPROC PFNGLFRAMEBUFFERTEXTURE3DPROC
+#define PFNglFramebufferRenderbufferPROC PFNGLFRAMEBUFFERRENDERBUFFERPROC
+#define PFNglGetFramebufferAttachmentParameterivPROC PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC
+#define PFNglGenerateMipmapPROC PFNGLGENERATEMIPMAPPROC
+#define PFNglBlitFramebufferPROC PFNGLBLITFRAMEBUFFERPROC
+#define PFNglRenderbufferStorageMultisamplePROC PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC
+#define PFNglFramebufferTextureLayerPROC PFNGLFRAMEBUFFERTEXTURELAYERPROC
+#define PFNglMapBufferRangePROC PFNGLMAPBUFFERRANGEPROC
+#define PFNglFlushMappedBufferRangePROC PFNGLFLUSHMAPPEDBUFFERRANGEPROC
+#define PFNglBindVertexArrayPROC PFNGLBINDVERTEXARRAYPROC
+#define PFNglDeleteVertexArraysPROC PFNGLDELETEVERTEXARRAYSPROC
+#define PFNglGenVertexArraysPROC PFNGLGENVERTEXARRAYSPROC
+#define PFNglIsVertexArrayPROC PFNGLISVERTEXARRAYPROC
+
+QGLDECLARE(glColorMaski);
+QGLDECLARE(glGetBooleani_v);
+QGLDECLARE(glGetIntegeri_v);
+QGLDECLARE(glEnablei);
+QGLDECLARE(glDisablei);
+QGLDECLARE(glIsEnabledi);
+QGLDECLARE(glBeginTransformFeedback);
+QGLDECLARE(glEndTransformFeedback);
+QGLDECLARE(glBindBufferRange);
+QGLDECLARE(glBindBufferBase);
+QGLDECLARE(glTransformFeedbackVaryings);
+QGLDECLARE(glGetTransformFeedbackVarying);
+QGLDECLARE(glClampColor);
+QGLDECLARE(glBeginConditionalRender);
+QGLDECLARE(glEndConditionalRender);
+QGLDECLARE(glVertexAttribIPointer);
+QGLDECLARE(glGetVertexAttribIiv);
+QGLDECLARE(glGetVertexAttribIuiv);
+QGLDECLARE(glVertexAttribI1i);
+QGLDECLARE(glVertexAttribI2i);
+QGLDECLARE(glVertexAttribI3i);
+QGLDECLARE(glVertexAttribI4i);
+QGLDECLARE(glVertexAttribI1ui);
+QGLDECLARE(glVertexAttribI2ui);
+QGLDECLARE(glVertexAttribI3ui);
+QGLDECLARE(glVertexAttribI4ui);
+QGLDECLARE(glVertexAttribI1iv);
+QGLDECLARE(glVertexAttribI2iv);
+QGLDECLARE(glVertexAttribI3iv);
+QGLDECLARE(glVertexAttribI4iv);
+QGLDECLARE(glVertexAttribI1uiv);
+QGLDECLARE(glVertexAttribI2uiv);
+QGLDECLARE(glVertexAttribI3uiv);
+QGLDECLARE(glVertexAttribI4uiv);
+QGLDECLARE(glVertexAttribI4bv);
+QGLDECLARE(glVertexAttribI4sv);
+QGLDECLARE(glVertexAttribI4ubv);
+QGLDECLARE(glVertexAttribI4usv);
+QGLDECLARE(glGetUniformuiv);
+QGLDECLARE(glBindFragDataLocation);
+QGLDECLARE(glGetFragDataLocation);
+QGLDECLARE(glUniform1ui);
+QGLDECLARE(glUniform2ui);
+QGLDECLARE(glUniform3ui);
+QGLDECLARE(glUniform4ui);
+QGLDECLARE(glUniform1uiv);
+QGLDECLARE(glUniform2uiv);
+QGLDECLARE(glUniform3uiv);
+QGLDECLARE(glUniform4uiv);
+QGLDECLARE(glTexParameterIiv);
+QGLDECLARE(glTexParameterIuiv);
+QGLDECLARE(glGetTexParameterIiv);
+QGLDECLARE(glGetTexParameterIuiv);
+QGLDECLARE(glClearBufferiv);
+QGLDECLARE(glClearBufferuiv);
+QGLDECLARE(glClearBufferfv);
+QGLDECLARE(glClearBufferfi);
+QGLDECLARE(glGetStringi);
+QGLDECLARE(glIsRenderbuffer);
+QGLDECLARE(glBindRenderbuffer);
+QGLDECLARE(glDeleteRenderbuffers);
+QGLDECLARE(glGenRenderbuffers);
+QGLDECLARE(glRenderbufferStorage);
+QGLDECLARE(glGetRenderbufferParameteriv);
+QGLDECLARE(glIsFramebuffer);
+QGLDECLARE(glBindFramebuffer);
+QGLDECLARE(glDeleteFramebuffers);
+QGLDECLARE(glGenFramebuffers);
+QGLDECLARE(glCheckFramebufferStatus);
+QGLDECLARE(glFramebufferTexture1D);
+QGLDECLARE(glFramebufferTexture2D);
+QGLDECLARE(glFramebufferTexture3D);
+QGLDECLARE(glFramebufferRenderbuffer);
+QGLDECLARE(glGetFramebufferAttachmentParameteriv);
+QGLDECLARE(glGenerateMipmap);
+QGLDECLARE(glBlitFramebuffer);
+QGLDECLARE(glRenderbufferStorageMultisample);
+QGLDECLARE(glFramebufferTextureLayer);
+QGLDECLARE(glMapBufferRange);
+QGLDECLARE(glFlushMappedBufferRange);
+QGLDECLARE(glBindVertexArray);
+QGLDECLARE(glDeleteVertexArrays);
+QGLDECLARE(glGenVertexArrays);
+QGLDECLARE(glIsVertexArray);

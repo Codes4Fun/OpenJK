@@ -228,6 +228,47 @@ PFNGLISPROGRAMARBPROC qglIsProgramARB;
 PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
 PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
 
+QGLDEFINE(glIsRenderbuffer);
+QGLDEFINE(glBindRenderbuffer);
+QGLDEFINE(glDeleteRenderbuffers);
+QGLDEFINE(glGenRenderbuffers);
+QGLDEFINE(glRenderbufferStorage);
+QGLDEFINE(glRenderbufferStorageMultisample);
+QGLDEFINE(glGetRenderbufferParameteriv);
+QGLDEFINE(glIsFramebuffer);
+QGLDEFINE(glBindFramebuffer);
+QGLDEFINE(glDeleteFramebuffers);
+QGLDEFINE(glGenFramebuffers);
+QGLDEFINE(glCheckFramebufferStatus);
+QGLDEFINE(glFramebufferTexture1D);
+QGLDEFINE(glFramebufferTexture2D);
+QGLDEFINE(glFramebufferTexture3D);
+QGLDEFINE(glFramebufferTextureLayer);
+QGLDEFINE(glFramebufferRenderbuffer);
+QGLDEFINE(glGetFramebufferAttachmentParameteriv);
+QGLDEFINE(glBlitFramebuffer);
+QGLDEFINE(glGenerateMipmap);
+QGLDEFINE(glBindBuffer);
+
+QGLDEFINE(glCreateShader);
+QGLDEFINE(glShaderSource);
+QGLDEFINE(glCompileShader);
+QGLDEFINE(glGetShaderiv);
+QGLDEFINE(glGetShaderInfoLog);
+QGLDEFINE(glCreateProgram);
+QGLDEFINE(glAttachShader);
+QGLDEFINE(glLinkProgram);
+QGLDEFINE(glGetProgramiv);
+QGLDEFINE(glGetProgramInfoLog);
+QGLDEFINE(glGetUniformLocation);
+QGLDEFINE(glGetAttribLocation);
+QGLDEFINE(glUseProgram);
+QGLDEFINE(glUniformMatrix4fv);
+QGLDEFINE(glVertexAttribPointer);
+QGLDEFINE(glEnableVertexAttribArray);
+QGLDEFINE(glUniform2f);
+QGLDEFINE(glUniform2fv);
+
 bool g_bTextureRectangleHack = false;
 
 void RE_SetLightStyle(int style, int color);
@@ -644,6 +685,51 @@ static void GLimp_InitExtensions( void )
 			Com_Printf ("...ignoring GL_ARB_vertex_program\n" );
 			Com_Printf ("...ignoring GL_ARB_fragment_program\n" );
 		}
+	}
+
+	// GL_ARB_framebuffer_object in OpenGL 3.0+
+	if ( strstr( glConfig.extensions_string, "GL_ARB_framebuffer_object" ) )
+	{
+		QGLGETPROC(glIsRenderbuffer);
+		QGLGETPROC(glBindRenderbuffer);
+		QGLGETPROC(glDeleteRenderbuffers);
+		QGLGETPROC(glGenRenderbuffers);
+		QGLGETPROC(glRenderbufferStorage);
+		QGLGETPROC(glRenderbufferStorageMultisample);
+		QGLGETPROC(glGetRenderbufferParameteriv);
+		QGLGETPROC(glIsFramebuffer);
+		QGLGETPROC(glBindFramebuffer);
+		QGLGETPROC(glDeleteFramebuffers);
+		QGLGETPROC(glGenFramebuffers);
+		QGLGETPROC(glCheckFramebufferStatus);
+		QGLGETPROC(glFramebufferTexture1D);
+		QGLGETPROC(glFramebufferTexture2D);
+		QGLGETPROC(glFramebufferTexture3D);
+		QGLGETPROC(glFramebufferTextureLayer);
+		QGLGETPROC(glFramebufferRenderbuffer);
+		QGLGETPROC(glGetFramebufferAttachmentParameteriv);
+		QGLGETPROC(glBlitFramebuffer);
+		QGLGETPROC(glGenerateMipmap);
+		QGLGETPROC(glBindBuffer);
+
+		QGLGETPROC(glCreateShader);
+		QGLGETPROC(glShaderSource);
+		QGLGETPROC(glCompileShader);
+		QGLGETPROC(glGetShaderiv);
+		QGLGETPROC(glGetShaderInfoLog);
+		QGLGETPROC(glCreateProgram);
+		QGLGETPROC(glAttachShader);
+		QGLGETPROC(glLinkProgram);
+		QGLGETPROC(glGetProgramiv);
+		QGLGETPROC(glGetProgramInfoLog);
+		QGLGETPROC(glGetUniformLocation);
+		QGLGETPROC(glGetAttribLocation);
+		QGLGETPROC(glUseProgram);
+		QGLGETPROC(glUniformMatrix4fv);
+		QGLGETPROC(glVertexAttribPointer);
+		QGLGETPROC(glEnableVertexAttribArray);
+		QGLGETPROC(glUniform2f);
+		QGLGETPROC(glUniform2fv);
 	}
 
 	// Figure out which texture rectangle extension to use.
