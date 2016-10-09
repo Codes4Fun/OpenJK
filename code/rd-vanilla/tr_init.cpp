@@ -228,6 +228,34 @@ PFNGLISPROGRAMARBPROC qglIsProgramARB;
 PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
 PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
 
+QGLDEFINE(glGenFramebuffers);
+QGLDEFINE(glGenRenderbuffers);
+QGLDEFINE(glBindRenderbuffer);
+QGLDEFINE(glRenderbufferStorage);
+QGLDEFINE(glBindFramebuffer);
+QGLDEFINE(glFramebufferTexture2D);
+QGLDEFINE(glFramebufferRenderbuffer);
+QGLDEFINE(glCheckFramebufferStatus);
+
+QGLDEFINE(glCreateShader);
+QGLDEFINE(glShaderSource);
+QGLDEFINE(glCompileShader);
+QGLDEFINE(glGetShaderiv);
+QGLDEFINE(glGetShaderInfoLog);
+QGLDEFINE(glCreateProgram);
+QGLDEFINE(glAttachShader);
+QGLDEFINE(glLinkProgram);
+QGLDEFINE(glGetProgramiv);
+QGLDEFINE(glGetProgramInfoLog);
+QGLDEFINE(glGetUniformLocation);
+QGLDEFINE(glGetAttribLocation);
+QGLDEFINE(glUseProgram);
+QGLDEFINE(glUniformMatrix4fv);
+QGLDEFINE(glVertexAttribPointer);
+QGLDEFINE(glEnableVertexAttribArray);
+QGLDEFINE(glUniform2f);
+QGLDEFINE(glUniform2fv);
+
 bool g_bTextureRectangleHack = false;
 
 void RE_SetLightStyle(int style, int color);
@@ -666,6 +694,38 @@ static void GLimp_InitExtensions( void )
 			Com_Printf ("...ignoring GL_ARB_vertex_program\n" );
 			Com_Printf ("...ignoring GL_ARB_fragment_program\n" );
 		}
+	}
+
+	// GL_ARB_framebuffer_object in OpenGL 3.0+
+	if ( strstr( glConfig.extensions_string, "GL_ARB_framebuffer_object" ) )
+	{
+		QGLGETPROC(glGenFramebuffers);
+		QGLGETPROC(glGenRenderbuffers);
+		QGLGETPROC(glBindRenderbuffer);
+		QGLGETPROC(glRenderbufferStorage);
+		QGLGETPROC(glBindFramebuffer);
+		QGLGETPROC(glFramebufferTexture2D);
+		QGLGETPROC(glFramebufferRenderbuffer);
+		QGLGETPROC(glCheckFramebufferStatus);
+
+		QGLGETPROC(glCreateShader);
+		QGLGETPROC(glShaderSource);
+		QGLGETPROC(glCompileShader);
+		QGLGETPROC(glGetShaderiv);
+		QGLGETPROC(glGetShaderInfoLog);
+		QGLGETPROC(glCreateProgram);
+		QGLGETPROC(glAttachShader);
+		QGLGETPROC(glLinkProgram);
+		QGLGETPROC(glGetProgramiv);
+		QGLGETPROC(glGetProgramInfoLog);
+		QGLGETPROC(glGetUniformLocation);
+		QGLGETPROC(glGetAttribLocation);
+		QGLGETPROC(glUseProgram);
+		QGLGETPROC(glUniformMatrix4fv);
+		QGLGETPROC(glVertexAttribPointer);
+		QGLGETPROC(glEnableVertexAttribArray);
+		QGLGETPROC(glUniform2f);
+		QGLGETPROC(glUniform2fv);
 	}
 
 	// Figure out which texture rectangle extension to use.
