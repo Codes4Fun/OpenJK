@@ -258,6 +258,10 @@ QGLDEFINE(glUniform2fv);
 
 bool g_bTextureRectangleHack = false;
 
+GLuint  g_fbo[2];
+GLuint  g_depthBuffer[2];
+GLuint  g_colorBuffer[2];
+
 void RE_SetLightStyle(int style, int color);
 
 static void DrawSplash(int buffer)
@@ -301,14 +305,7 @@ void R_Splash()
 		GL_Bind( pImage );
 		GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 
-		if (glConfig.stereoEnabled == 2)
-		{
-			qglViewport( 0, 0, glConfig.vidWidth/2, glConfig.vidHeight );
-			DrawSplash(GL_BACK);
-			qglViewport( glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight );
-			DrawSplash(GL_BACK);
-		}
-		else if (glConfig.stereoEnabled == 1)
+		if (glConfig.stereoEnabled)
 		{
 			DrawSplash(GL_BACK_LEFT);
 			DrawSplash(GL_BACK_RIGHT);
@@ -318,8 +315,7 @@ void R_Splash()
 			DrawSplash(GL_BACK);
 		}
 	}
-
-	GL_Present(0);
+	GL_Present();
 }
 
 /*
@@ -763,6 +759,66 @@ static void GLimp_InitExtensions( void )
 	}
 }
 
+static void InitFramebuffers( void )
+{
+	if (glConfig.stereoEnabled != 2 || !qglGenFramebuffers)
+	{
+		return;
+	}
+
+	qglGenTextures(2, g_depthBuffer);
+	qglGenTextures(2, g_colorBuffer);
+	qglGenFramebuffers(2, g_fbo);
+
+	qglBindTexture(GL_TEXTURE_2D, g_depthBuffer[0]);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	qglTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, glConfig.vidWidth, glConfig.vidHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+
+	qglBindTexture(GL_TEXTURE_2D, g_colorBuffer[0]);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+
+	qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[0]);
+	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_colorBuffer[0], 0);
+	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, g_depthBuffer[0], 0);
+
+	GLenum status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		Com_Printf ("...framebuffer initialization failed\n" );
+	}
+
+	qglBindTexture(GL_TEXTURE_2D, g_depthBuffer[1]);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	qglTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, glConfig.vidWidth, glConfig.vidHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+
+	qglBindTexture(GL_TEXTURE_2D, g_colorBuffer[1]);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+
+	qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[1]);
+	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_colorBuffer[1], 0);
+	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, g_depthBuffer[1], 0);
+
+	status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		Com_Printf ("...framebuffer initialization failed\n" );
+	}
+}
+
 /*
 ** InitOpenGL
 **
@@ -808,6 +864,10 @@ static void InitOpenGL( void )
 
 		// set default state
 		GL_SetDefaultState();
+
+		// initalize framebuffers if we need them
+		InitFramebuffers();
+
 		R_Splash();	//get something on screen asap
 	}
 	else

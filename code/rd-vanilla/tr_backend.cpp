@@ -396,19 +396,25 @@ void GL_State( uint32_t stateBits )
 	glState.glStateBits = stateBits;
 }
 
+extern GLuint  g_fbo[2];
+extern GLuint  g_depthBuffer[2];
+extern GLuint  g_colorBuffer[2];
+
 void GL_DrawBuffer( int buffer ) {
 	if (glConfig.stereoEnabled == 2)
 	{
 		qglDrawBuffer(GL_BACK);
-		if (buffer == GL_BACK_RIGHT)
+		if (buffer == GL_BACK_LEFT)
 		{
-			// copy left image
-			qglDisable( GL_TEXTURE_2D );
-			qglEnable( GL_TEXTURE_RECTANGLE_ARB );
-			qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenLeftImage );
-			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-			qglDisable( GL_TEXTURE_RECTANGLE_ARB );
-			qglEnable( GL_TEXTURE_2D );
+			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[0]);
+		}
+		else if (buffer == GL_BACK_RIGHT)
+		{
+			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[1]);
+		}
+		else
+		{
+			qglBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 	}
 	else
@@ -417,17 +423,12 @@ void GL_DrawBuffer( int buffer ) {
 	}
 }
 
-void GL_Present( int stereo )
+void GL_Present( void )
 {
-	if (glConfig.stereoEnabled == 2 && stereo)
+	if (glConfig.stereoEnabled == 2)
 	{
-		// copy right image
-		qglDisable( GL_TEXTURE_2D );
-		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
-		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
-		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
-		qglEnable( GL_TEXTURE_2D );
+		qglBindFramebuffer(GL_FRAMEBUFFER, 0);
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 
 		qglDisable (GL_CLIP_PLANE0);
 		GL_Cull( CT_TWO_SIDED );
@@ -443,43 +444,44 @@ void GL_Present( int stereo )
 
 		GL_State(GLS_DEPTHTEST_DISABLE);
 
-		qglDisable( GL_TEXTURE_2D );
-		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
+		GLint texture;
+		qglGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
 
-		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenLeftImage );
+		// left
+		qglBindTexture( GL_TEXTURE_2D, g_colorBuffer[0] );
 		qglBegin(GL_QUADS);
 			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-			qglTexCoord2f( 0, glConfig.vidHeight );
+			qglTexCoord2f( 0, 1.f );
 			qglVertex2f( 0, 0 );
 
 			qglTexCoord2f( 0, 0 );
 			qglVertex2f( 0, glConfig.vidHeight );
 
-			qglTexCoord2f( glConfig.vidWidth, 0 );
+			qglTexCoord2f( 1.f, 0 );
 			qglVertex2f( glConfig.vidWidth/2, glConfig.vidHeight );
 
-			qglTexCoord2f( glConfig.vidWidth, glConfig.vidHeight );
+			qglTexCoord2f( 1.f, 1.f );
 			qglVertex2f( glConfig.vidWidth/2, 0 );
 		qglEnd();
 
-		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
+		// right
+		qglBindTexture( GL_TEXTURE_2D, g_colorBuffer[1] );
 		qglBegin(GL_QUADS);
 			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-			qglTexCoord2f( 0, glConfig.vidHeight );
+			qglTexCoord2f( 0, 1.f );
 			qglVertex2f( glConfig.vidWidth/2, 0 );
 
 			qglTexCoord2f( 0, 0 );
 			qglVertex2f( glConfig.vidWidth/2, glConfig.vidHeight );
 
-			qglTexCoord2f( glConfig.vidWidth, 0 );
+			qglTexCoord2f( 1.f, 0 );
 			qglVertex2f( glConfig.vidWidth, glConfig.vidHeight );
 
-			qglTexCoord2f( glConfig.vidWidth, glConfig.vidHeight );
+			qglTexCoord2f( 1.f, 1.f );
 			qglVertex2f( glConfig.vidWidth, 0 );
 		qglEnd();
 
-		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
-		qglEnable( GL_TEXTURE_2D );
+		qglBindTexture( GL_TEXTURE_2D, texture );
 
 		qglMatrixMode(GL_PROJECTION);
 		qglPopMatrix();
@@ -1667,7 +1669,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 
-	GL_Present(1);
+	GL_Present();
 
 	backEnd.projection2D = qfalse;
 
