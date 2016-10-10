@@ -825,6 +825,25 @@ qboolean RE_InitDissolve(qboolean bForceCircularExtroWipe)
 			}
 			R_Free(pbSwapLineBuffer);
 
+			if (glConfig.stereoEnabled == 2)
+			{
+				uint32_t * pSrc = (uint32_t*)pBuffer + glConfig.vidWidth/2;
+				uint32_t * pDst = (uint32_t*)pBuffer + glConfig.vidWidth;
+				int offsetSrc = iPow2VidWidth+glConfig.vidWidth/2;
+				int offsetDst = iPow2VidWidth+glConfig.vidWidth;
+				for (int y = 0; y < glConfig.vidHeight; y++)
+				{
+					for (int x = 0; x < glConfig.vidWidth/2; x++)
+					{
+						uint32_t color = *(pSrc--);
+						*(pDst--) = color;
+						*(pDst--) = color;
+					}
+					pSrc += offsetSrc;
+					pDst += offsetDst;
+				}
+			}
+
 			//
 			// Now, in case of busted drivers, 3DFX cards, etc etc we stomp the alphas to 255...
 			//

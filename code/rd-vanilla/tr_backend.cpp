@@ -426,6 +426,10 @@ void GL_Present( int stereo )
 {
 	if (glConfig.stereoEnabled == 2 && stereo)
 	{
+		GLint viewport[4];
+		qglGetIntegerv(GL_VIEWPORT, viewport);
+		qglViewport(0,0,glConfig.vidWidth,glConfig.vidHeight);
+
 		// copy right image
 		qglDisable( GL_TEXTURE_2D );
 		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
@@ -490,6 +494,8 @@ void GL_Present( int stereo )
 		qglPopMatrix();
 		qglMatrixMode(GL_MODELVIEW);
 		qglPopMatrix();
+
+		qglViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
 	}
 	ri.WIN_Present(&window);
 }
