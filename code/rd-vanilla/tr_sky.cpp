@@ -386,6 +386,7 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 		}
 
 		qglEnd();
+		backEnd.needPresent = qtrue;
 	}
 }
 

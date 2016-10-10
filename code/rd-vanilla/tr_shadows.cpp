@@ -132,6 +132,7 @@ void R_RenderShadowEdges( void ) {
 				c_rejected++;
 			}
 #endif
+			backEnd.needPresent = qtrue;
 		}
 	}
 
@@ -161,6 +162,7 @@ void R_RenderShadowEdges( void ) {
 			qglVertex3fv(shadowXyz[o2]);
 			qglVertex3fv(shadowXyz[o1]);
 		qglEnd();
+		backEnd.needPresent = qtrue;
 	}
 #endif
 }
@@ -468,6 +470,7 @@ void RB_ShadowFinish( void ) {
 	qglVertex3f( 100, -100, -10 );
 	qglVertex3f( -100, -100, -10 );
 	qglEnd ();
+	backEnd.needPresent = qtrue;
 
 	qglColor4f(1,1,1,1);
 	qglDisable( GL_STENCIL_TEST );
@@ -673,6 +676,7 @@ void RB_DistortionFill(void)
 		qglTexCoord2f(1-spost2, 1-spost);
 		qglVertex2f(glConfig.vidWidth, 0);
 	qglEnd();
+	backEnd.needPresent = qtrue;
 
 	if (tr_distortionAlpha == 1.0f && tr_distortionStretch == 0.0f)
 	{ //no overrides
@@ -715,6 +719,7 @@ void RB_DistortionFill(void)
 			qglTexCoord2f(1-spost2, 1-spost);
 			qglVertex2f(glConfig.vidWidth, 0);
 		qglEnd();
+		backEnd.needPresent = qtrue;
 	}
 
 	//pop the view matrices back

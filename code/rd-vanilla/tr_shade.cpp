@@ -159,6 +159,7 @@ static void R_DrawStripElements( int numIndexes, const glIndex_t *indexes, void 
 	}
 
 	qglEnd();
+	backEnd.needPresent = qtrue;
 }
 
 /*
@@ -190,6 +191,7 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 						numIndexes,
 						GL_INDEX_TYPE,
 						indexes );
+		backEnd.needPresent = qtrue;
 		return;
 	}
 
@@ -410,6 +412,8 @@ static void DrawNormals (shaderCommands_t *input) {
 	qglEnd ();
 
 	qglDepthRange( 0, 1 );
+
+	backEnd.needPresent = qtrue;
 }
 
 
