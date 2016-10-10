@@ -1423,6 +1423,8 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 	}
 	qglEnd();
 	qglDepthRange( 0, 1 );
+
+	backEnd.needPresent = qtrue;
 }
 
 /*

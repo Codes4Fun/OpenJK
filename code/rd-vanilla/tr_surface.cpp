@@ -1116,6 +1116,7 @@ static void RB_SurfaceBeam( void )
 		qglVertex3fv( end_points[ i % NUM_BEAM_SEGS] );
 	}
 	qglEnd();
+	backEnd.needPresent = qtrue;
 }
 
 
@@ -1940,6 +1941,7 @@ static void RB_SurfaceAxis( void ) {
 	qglVertex3f( 0,0,16 );
 	qglEnd();
 	qglLineWidth( 1 );
+	backEnd.needPresent = qtrue;
 }
 
 //===========================================================================
