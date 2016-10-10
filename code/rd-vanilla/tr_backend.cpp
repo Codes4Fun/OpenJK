@@ -400,8 +400,13 @@ void GL_DrawBuffer( int buffer ) {
 	if (glConfig.stereoEnabled == 2)
 	{
 		qglDrawBuffer(GL_BACK);
-		if (buffer == GL_BACK_RIGHT)
+		if (buffer == GL_BACK_LEFT)
 		{
+			backEnd.stereoLeft = qtrue;
+		}
+		else if (buffer == GL_BACK_RIGHT)
+		{
+			backEnd.stereoLeft = qfalse;
 			// copy left image
 			qglDisable( GL_TEXTURE_2D );
 			qglEnable( GL_TEXTURE_RECTANGLE_ARB );
@@ -511,10 +516,26 @@ static void RB_Hyperspace( void ) {
 	backEnd.isHyperspace = qtrue;
 }
 
-
 void SetViewportAndScissor( void ) {
 	qglMatrixMode(GL_PROJECTION);
-	qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
+	if (glConfig.stereoEnabled)
+	{
+		qglLoadIdentity();
+		float tvStereoOffset = r_stereoEyeDistance->value / r_stereoDisplayWidth->value;
+		if (backEnd.stereoLeft)
+		{
+			qglTranslatef(-tvStereoOffset, 0.f, 0.f);
+		}
+		else
+		{
+			qglTranslatef(tvStereoOffset, 0.f, 0.f);
+		}
+		qglMultMatrixf( backEnd.viewParms.projectionMatrix );
+	}
+	else
+	{
+		qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
+	}
 	qglMatrixMode(GL_MODELVIEW);
 
 	// set the window clipping

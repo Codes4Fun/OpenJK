@@ -942,6 +942,8 @@ typedef struct {
 	byte		color2D[4];
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
+
+	qboolean	stereoLeft;
 } backEndState_t;
 
 /*
@@ -1095,6 +1097,8 @@ extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
 extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for fullscreen
 extern cvar_t	*r_stereo;				// desired pixelformat stereo flag
+extern cvar_t	*r_stereoDisplayWidth;	// width of the stereoscopic display
+extern cvar_t	*r_stereoEyeDistance;	// distance between the pupils of your eyes
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth
 										// 16 = use 16-bit textures

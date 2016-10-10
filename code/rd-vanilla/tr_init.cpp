@@ -185,6 +185,9 @@ cvar_t	*com_buildScript;
 cvar_t	*r_environmentMapping;
 cvar_t *r_screenshotJpegQuality;
 
+cvar_t *r_stereoDisplayWidth;
+cvar_t *r_stereoEyeDistance;
+
 
 PFNGLACTIVETEXTUREARBPROC qglActiveTextureARB;
 PFNGLCLIENTACTIVETEXTUREARBPROC qglClientActiveTextureARB;
@@ -1688,6 +1691,9 @@ Ghoul2 Insert End
 
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_AddCommand( commands[i].cmd, commands[i].func );
+
+	r_stereoDisplayWidth	= ri.Cvar_Get( "r_stereoDisplayWidth",	"52",	CVAR_ARCHIVE );
+	r_stereoEyeDistance		= ri.Cvar_Get( "r_stereoEyeDistance",	"2.4",	CVAR_ARCHIVE );
 }
 
 // need to do this hackery so ghoul2 doesn't crash the game because of ITS hackery...
