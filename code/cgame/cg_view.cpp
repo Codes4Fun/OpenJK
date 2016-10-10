@@ -2012,7 +2012,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView ) {
 
 		CG_DrawSkyBoxPortal();
 		if ( !cg.hyperspace ) {
-			CG_AddPacketEntities(qfalse,qtrue);			// adter calcViewValues, so predicted player state is correct
+			CG_AddPacketEntities(qfalse, !in_camera);			// adter calcViewValues, so predicted player state is correct
 			CG_AddMarks();
 			CG_AddLocalEntities();
 			CG_DrawMiscEnts();
