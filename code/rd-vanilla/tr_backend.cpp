@@ -518,6 +518,7 @@ static void RB_Hyperspace( void ) {
 	c = ( backEnd.refdef.time & 255 ) / 255.0f;
 	qglClearColor( c, c, c, 1 );
 	qglClear( GL_COLOR_BUFFER_BIT );
+	backEnd.needPresent = qtrue;
 
 	backEnd.isHyperspace = qtrue;
 }
@@ -647,6 +648,7 @@ static void RB_BeginDrawingView (void) {
 	if (clearBits)
 	{
 		qglClear( clearBits );
+		backEnd.needPresent = qtrue;
 	}
 
 	if ( ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) )
@@ -1538,6 +1540,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 		qglClearColor(fog->parms.color[0],  fog->parms.color[1], fog->parms.color[2], 1.0f );
 		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		backEnd.needPresent = qtrue;
 	}
 	else if (!( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && tr.world && tr.world->globalFog != -1 && tr.sceneCount)//don't clear during menus, wait for real scene
 	{
@@ -1545,6 +1548,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 		qglClearColor(fog->parms.color[0],  fog->parms.color[1], fog->parms.color[2], 1.0f );
 		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+		backEnd.needPresent = qtrue;
 	}
 	else if ( r_clear->integer )
 	{	// clear screen for debugging
@@ -1583,6 +1587,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 			break;
 		}
 		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+		backEnd.needPresent = qtrue;
 	}
 
 	return (const void *)(cmd + 1);
@@ -1639,6 +1644,7 @@ void RB_ShowImages( void ) {
 			qglVertex2f( x, y + h );
 		qglEnd();
 		i++;
+		backEnd.needPresent = qtrue;
 	}
 
 	qglFinish();
@@ -1694,7 +1700,11 @@ const void	*RB_SwapBuffers( const void *data ) {
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 
-	GL_Present(1);
+	if (backEnd.needPresent)
+	{
+		GL_Present(1);
+		backEnd.needPresent = qfalse;
+	}
 
 	backEnd.projection2D = qfalse;
 

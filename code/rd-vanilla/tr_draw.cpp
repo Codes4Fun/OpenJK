@@ -136,6 +136,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	qglTexCoord2f ( 0.5f / cols, ( rows - 0.5f ) / rows );
 	qglVertex2f (x, y+h);
 	qglEnd ();
+	backEnd.needPresent = qtrue;
 }
 
 
@@ -454,6 +455,7 @@ static void RE_Blit(float fX0, float fY0, float fX1, float fY1, float fX2, float
 		qglVertex2f( fX3, fY3);
 	}
 	qglEnd ();
+	backEnd.needPresent = qtrue;
 }
 
 static void RE_KillDissolve(void)

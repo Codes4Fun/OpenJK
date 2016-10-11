@@ -943,6 +943,8 @@ typedef struct {
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
 
+	qboolean	needPresent;
+
 	qboolean	stereoLeft;
 } backEndState_t;
 

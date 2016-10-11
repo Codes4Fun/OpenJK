@@ -119,6 +119,7 @@ void CQuickSpriteSystem::Flush(void)
 	}
 
 	qglDrawArrays(GL_QUADS, 0, mNextVert);
+	backEnd.needPresent = qtrue;
 
 	backEnd.pc.c_vertexes += mNextVert;
 	backEnd.pc.c_indexes += mNextVert;
@@ -151,6 +152,7 @@ void CQuickSpriteSystem::Flush(void)
 //		qglVertexPointer (3, GL_FLOAT, 16, mVerts);	// Done above
 
 		qglDrawArrays(GL_QUADS, 0, mNextVert);
+		backEnd.needPresent = qtrue;
 
 		// Second pass from fog
 		backEnd.pc.c_totalIndexes += mNextVert;
