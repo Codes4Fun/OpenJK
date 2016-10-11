@@ -276,14 +276,7 @@ void R_Splash()
 		GL_Bind( pImage );
 		GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 
-		if (glConfig.stereoEnabled == 2)
-		{
-			qglViewport( 0, 0, glConfig.vidWidth/2, glConfig.vidHeight );
-			DrawSplash(GL_BACK);
-			qglViewport( glConfig.vidWidth/2, 0, glConfig.vidWidth/2, glConfig.vidHeight );
-			DrawSplash(GL_BACK);
-		}
-		else if (glConfig.stereoEnabled == 1)
+		if (glConfig.stereoEnabled)
 		{
 			DrawSplash(GL_BACK_LEFT);
 			DrawSplash(GL_BACK_RIGHT);
@@ -294,7 +287,7 @@ void R_Splash()
 		}
 	}
 
-	GL_Present(0);
+	GL_Present();
 }
 
 /*
@@ -706,6 +699,34 @@ static void GLimp_InitExtensions( void )
 	}
 }
 
+extern int giTextureBindNum;
+GLuint screenLeftImage;
+GLuint screenRightImage;
+
+static void InitBuffers( void )
+{
+	if (glConfig.stereoEnabled != 2)
+	{
+		return;
+	}
+
+	screenLeftImage = 1024 + giTextureBindNum++;
+	qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, screenLeftImage );
+	qglTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
+
+	screenRightImage = 1024 + giTextureBindNum++;
+	qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, screenRightImage );
+	qglTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
+	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
+}
+
 /*
 ** InitOpenGL
 **
@@ -751,6 +772,10 @@ static void InitOpenGL( void )
 
 		// set default state
 		GL_SetDefaultState();
+
+		// initialize buffers if we need them
+		InitBuffers();
+
 		R_Splash();	//get something on screen asap
 	}
 	else

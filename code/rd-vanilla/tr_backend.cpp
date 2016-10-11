@@ -396,6 +396,9 @@ void GL_State( uint32_t stateBits )
 	glState.glStateBits = stateBits;
 }
 
+extern GLuint screenLeftImage;
+extern GLuint screenRightImage;
+
 void GL_DrawBuffer( int buffer ) {
 	if (glConfig.stereoEnabled == 2)
 	{
@@ -410,7 +413,7 @@ void GL_DrawBuffer( int buffer ) {
 			// copy left image
 			qglDisable( GL_TEXTURE_2D );
 			qglEnable( GL_TEXTURE_RECTANGLE_ARB );
-			qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenLeftImage );
+			qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, screenLeftImage );
 			qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 			qglDisable( GL_TEXTURE_RECTANGLE_ARB );
 			qglEnable( GL_TEXTURE_2D );
@@ -422,9 +425,9 @@ void GL_DrawBuffer( int buffer ) {
 	}
 }
 
-void GL_Present( int stereo )
+void GL_Present( void )
 {
-	if (glConfig.stereoEnabled == 2 && stereo)
+	if (glConfig.stereoEnabled == 2)
 	{
 		GLint viewport[4];
 		qglGetIntegerv(GL_VIEWPORT, viewport);
@@ -433,7 +436,7 @@ void GL_Present( int stereo )
 		// copy right image
 		qglDisable( GL_TEXTURE_2D );
 		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
-		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
+		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, screenRightImage );
 		qglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 		qglDisable( GL_TEXTURE_RECTANGLE_ARB );
 		qglEnable( GL_TEXTURE_2D );
@@ -455,7 +458,7 @@ void GL_Present( int stereo )
 		qglDisable( GL_TEXTURE_2D );
 		qglEnable( GL_TEXTURE_RECTANGLE_ARB );
 
-		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenLeftImage );
+		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, screenLeftImage );
 		qglBegin(GL_QUADS);
 			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 			qglTexCoord2f( 0, glConfig.vidHeight );
@@ -471,7 +474,7 @@ void GL_Present( int stereo )
 			qglVertex2f( glConfig.vidWidth/2, 0 );
 		qglEnd();
 
-		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
+		qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, screenRightImage );
 		qglBegin(GL_QUADS);
 			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 			qglTexCoord2f( 0, glConfig.vidHeight );
@@ -1702,7 +1705,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 
 	if (backEnd.needPresent)
 	{
-		GL_Present(1);
+		GL_Present();
 		backEnd.needPresent = qfalse;
 	}
 
