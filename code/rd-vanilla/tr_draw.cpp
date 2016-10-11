@@ -827,7 +827,11 @@ qboolean RE_InitDissolve(qboolean bForceCircularExtroWipe)
 			}
 			R_Free(pbSwapLineBuffer);
 
-			if (glConfig.stereoEnabled == 2)
+			//
+			// nothing has been drawn than our backbuffer has both the left and right images for
+			// sterescopic 3d, so we must stretch one image over the other.
+			//
+			if (glConfig.stereoEnabled == 2 && !backEnd.needPresent)
 			{
 				uint32_t * pSrc = (uint32_t*)pBuffer + glConfig.vidWidth/2;
 				uint32_t * pDst = (uint32_t*)pBuffer + glConfig.vidWidth;
