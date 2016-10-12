@@ -4283,9 +4283,12 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	}
 
 	cg.refdef.rdflags |= RDF_DRAWSKYBOX;
+	cg.refdef.rdflags |= RDF_STEREO;
 
 	// draw 3D view
 	cgi_R_RenderScene( &cg.refdef );
+
+	cg.refdef.rdflags &= ~RDF_STEREO;
 
 	// restore original viewpoint if running stereo
 	if ( separation != 0 ) {

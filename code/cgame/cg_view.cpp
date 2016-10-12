@@ -1929,6 +1929,7 @@ static void CG_DrawSkyBoxPortal(void)
 
 	cg.refdef.rdflags |= RDF_SKYBOXPORTAL;	//mark portal scene specialness
 	cg.refdef.rdflags |= RDF_DRAWSKYBOX;	//drawk portal skies
+	cg.refdef.rdflags |= RDF_STEREO_FAR;	//in stereoscopic draw far away
 
 	cgi_CM_SnapPVS( cg.refdef.vieworg, cg.refdef.areamask );	//fill in my areamask for this view origin
 	// draw the skybox

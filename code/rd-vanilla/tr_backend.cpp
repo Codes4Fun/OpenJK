@@ -531,16 +531,31 @@ void SetViewportAndScissor( void ) {
 	if (glConfig.stereoEnabled)
 	{
 		qglLoadIdentity();
-		float tvStereoOffset = r_stereoEyeDistance->value / r_stereoDisplayWidth->value;
-		if (backEnd.stereoLeft)
+		if (backEnd.refdef.rdflags & (RDF_STEREO|RDF_STEREO_FAR))
 		{
-			qglTranslatef(-tvStereoOffset, 0.f, 0.f);
-		}
-		else
-		{
-			qglTranslatef(tvStereoOffset, 0.f, 0.f);
+			float tvStereoOffset = r_stereoEyeDistance->value / r_stereoDisplayWidth->value;
+			if (backEnd.stereoLeft)
+			{
+				qglTranslatef(-tvStereoOffset, 0.f, 0.f);
+			}
+			else
+			{
+				qglTranslatef(tvStereoOffset, 0.f, 0.f);
+			}
 		}
 		qglMultMatrixf( backEnd.viewParms.projectionMatrix );
+		if (backEnd.refdef.rdflags & RDF_STEREO)
+		{
+			float separation = r_stereoSeparation->value/2;
+			if (backEnd.stereoLeft)
+			{
+				qglTranslatef(separation, 0.f, 0.f);
+			}
+			else
+			{
+				qglTranslatef(-separation, 0.f, 0.f);
+			}
+		}
 	}
 	else
 	{
@@ -1222,6 +1237,44 @@ const void *RB_StretchPic ( const void *data ) {
 
 /*
 =============
+RB_StretchScratch
+=============
+*/
+const void *RB_StretchScratch ( const void *data ) {
+	const stretchScratchCommand_t	*cmd;
+
+	cmd = (const stretchScratchCommand_t *)data;
+
+	if ( !backEnd.projection2D ) {
+		RB_SetGL2D();
+	}
+
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+
+	GL_Bind( tr.scratchImage[cmd->iClient] );
+
+	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
+
+	qglBegin (GL_QUADS);
+	qglTexCoord2f ( 0.5f / cmd->cols,  0.5f / cmd->rows );
+	qglVertex2f (cmd->x, cmd->y);
+	qglTexCoord2f ( ( cmd->cols - 0.5f ) / cmd->cols ,  0.5f / cmd->rows );
+	qglVertex2f (cmd->x+cmd->w, cmd->y);
+	qglTexCoord2f ( ( cmd->cols - 0.5f ) / cmd->cols, ( cmd->rows - 0.5f ) / cmd->rows );
+	qglVertex2f (cmd->x+cmd->w, cmd->y+cmd->h);
+	qglTexCoord2f ( 0.5f / cmd->cols, ( cmd->rows - 0.5f ) / cmd->rows );
+	qglVertex2f (cmd->x, cmd->y+cmd->h);
+	qglEnd ();
+	backEnd.needPresent = qtrue;
+
+	return (const void *)(cmd + 1);
+}
+
+
+/*
+=============
 RB_RotatePic
 =============
 */
@@ -1740,11 +1793,7 @@ const void	*RB_WorldEffects( const void *data )
 RB_ExecuteRenderCommands
 ====================
 */
-void RB_ExecuteRenderCommands( const void *data ) {
-	int		t1, t2;
-
-	t1 = ri.Milliseconds ();
-
+static void ExecuteRenderCommands( const void *data, int buffer ) {
 	while ( 1 ) {
 		data = PADP(data, sizeof(void *));
 
@@ -1754,6 +1803,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			break;
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );
+			break;
+		case RC_STRETCH_SCRATCH:
+			data = RB_StretchScratch( data );
 			break;
 		case RC_ROTATE_PIC:
 			data = RB_RotatePic( data );
@@ -1767,24 +1819,52 @@ void RB_ExecuteRenderCommands( const void *data ) {
 		case RC_DRAW_SURFS:
 			data = RB_DrawSurfs( data );
 			break;
+		case RC_PROCESS_DISSOLVE:
+			data = RB_ProcessDissolve( data );
+			break;
 		case RC_DRAW_BUFFER:
+			((drawBufferCommand_t *)data)->buffer = buffer;
 			data = RB_DrawBuffer( data );
 			break;
 		case RC_SWAP_BUFFERS:
-			data = RB_SwapBuffers( data );
+			if (buffer == GL_BACK || buffer == GL_BACK_RIGHT)
+			{
+				data = RB_SwapBuffers( data );
+			}
+			else
+			{
+				data = (const void*)((swapBuffersCommand_t*)data + 1);
+			}
 			break;
 		case RC_WORLD_EFFECTS:
 			data = RB_WorldEffects( data );
 			break;
 		case RC_END_OF_LIST:
 		default:
-			// stop rendering
-			t2 = ri.Milliseconds ();
-			backEnd.pc.msec = t2 - t1;
 			return;
 		}
 	}
 
+}
+
+void RB_ExecuteRenderCommands( const void *data ) {
+	int		t1, t2;
+
+	t1 = ri.Milliseconds ();
+
+	if (glConfig.stereoEnabled)
+	{
+		ExecuteRenderCommands(data, GL_BACK_LEFT);
+		ExecuteRenderCommands(data, GL_BACK_RIGHT);
+	}
+	else
+	{
+		ExecuteRenderCommands(data, GL_BACK);
+	}
+
+	// stop rendering
+	t2 = ri.Milliseconds ();
+	backEnd.pc.msec = t2 - t1;
 }
 
 // What Pixel Shader type is currently active (regcoms or fragment programs).

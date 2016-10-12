@@ -499,12 +499,16 @@ void SCR_UpdateScreen( void ) {
 	if ( cls.uiStarted )
 	{
 		// if running in stereo, we need to draw the frame twice
+#if 0
 		if ( cls.glconfig.stereoEnabled ) {
 			SCR_DrawScreenField( STEREO_LEFT );
 			SCR_DrawScreenField( STEREO_RIGHT );
 		} else {
 			SCR_DrawScreenField( STEREO_CENTER );
 		}
+#else
+		SCR_DrawScreenField( STEREO_CENTER );
+#endif
 
 		if ( com_speeds->integer ) {
 			re.EndFrame( &time_frontend, &time_backend );
