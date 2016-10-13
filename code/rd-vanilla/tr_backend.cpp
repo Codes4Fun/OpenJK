@@ -543,7 +543,22 @@ void SetViewportAndScissor( void ) {
 				qglTranslatef(tvStereoOffset, 0.f, 0.f);
 			}
 		}
-		qglMultMatrixf( backEnd.viewParms.projectionMatrix );
+
+		if (backEnd.refdef.rdflags & RDF_UI)
+		{
+			float zNear = r_znear->value;
+			float zFar	= backEnd.viewParms.zFar;
+			float scalex = r_stereoDisplayWidth->value *0.5f / r_stereoDisplayDistance->value;
+			float scaley = scalex * 480.f / 640.f;
+			float hwidth = zNear * scalex;
+			float hheight = zNear * scaley;
+			qglFrustum(-hwidth,hwidth,-hheight,hheight,zNear,zFar);
+		}
+		else
+		{
+			qglMultMatrixf( backEnd.viewParms.projectionMatrix );
+		}
+
 		if (backEnd.refdef.rdflags & RDF_STEREO)
 		{
 			float separation = r_stereoSeparation->value/2;
@@ -564,8 +579,15 @@ void SetViewportAndScissor( void ) {
 	qglMatrixMode(GL_MODELVIEW);
 
 	// set the window clipping
-	qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	if (backEnd.refdef.rdflags & RDF_UI)
+	{
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	}
+	else
+	{
+		qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	}
 	qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
 		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
 }

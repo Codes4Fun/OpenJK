@@ -1098,6 +1098,7 @@ extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for
 extern cvar_t	*r_stereo;				// desired pixelformat stereo flag
 extern cvar_t	*r_stereoSeparation;	// eye separation in the game world
 extern cvar_t	*r_stereoDisplayWidth;	// width of the stereoscopic display
+extern cvar_t	*r_stereoDisplayDistance;	// distance of the stereoscopic display
 extern cvar_t	*r_stereoEyeDistance;	// distance between the pupils of your eyes
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth

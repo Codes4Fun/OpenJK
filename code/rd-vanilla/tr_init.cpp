@@ -187,6 +187,7 @@ cvar_t *r_screenshotJpegQuality;
 
 cvar_t *r_stereoSeparation;
 cvar_t *r_stereoDisplayWidth;
+cvar_t *r_stereoDisplayDistance;
 cvar_t *r_stereoEyeDistance;
 
 
@@ -1720,6 +1721,7 @@ Ghoul2 Insert End
 
 	r_stereoSeparation		= ri.Cvar_Get( "r_stereoSeparation",	"3",	CVAR_ARCHIVE );
 	r_stereoDisplayWidth	= ri.Cvar_Get( "r_stereoDisplayWidth",	"52",	CVAR_ARCHIVE );
+	r_stereoDisplayDistance	= ri.Cvar_Get( "r_stereoDisplayDistance",	"76",	CVAR_ARCHIVE );
 	r_stereoEyeDistance		= ri.Cvar_Get( "r_stereoEyeDistance",	"2.4",	CVAR_ARCHIVE );
 }
 
