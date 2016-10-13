@@ -2435,7 +2435,7 @@ CG_AddPacketEntities
 
 ===============
 */
-void CG_AddPacketEntities( qboolean isPortal, qboolean paused ) {
+void CG_AddPacketEntities( qboolean isPortal ) {
 	int					num;
 	centity_t			*cent;
 	playerState_t		*ps;
@@ -2455,7 +2455,7 @@ void CG_AddPacketEntities( qboolean isPortal, qboolean paused ) {
 	}
 
 	// set cg.frameInterpolation
-	if ( cg.nextSnap && !paused )
+	if ( cg.nextSnap )
 	{
 		int		delta;
 
@@ -2491,10 +2491,7 @@ void CG_AddPacketEntities( qboolean isPortal, qboolean paused ) {
 
 	// generate and add the entity from the playerstate
 	ps = &cg.predicted_player_state;
-	if (!paused)
-	{
-		PlayerStateToEntityState( ps, &cg_entities[ ps->clientNum ].currentState );
-	}
+	PlayerStateToEntityState( ps, &cg_entities[ ps->clientNum ].currentState );
 //	cent = &cg_entities[ ps->clientNum ];	// not needed now that player is in the snap packet
 //	CG_AddCEntity( cent );					//
 

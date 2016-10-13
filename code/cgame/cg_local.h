@@ -789,7 +789,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position );
 // cg_ents.c
 //
 vec3_t *CG_SetEntitySoundPosition( centity_t *cent );
-void CG_AddPacketEntities( qboolean isPortal, qboolean paused = qfalse );
+void CG_AddPacketEntities( qboolean isPortal );
 void CG_Beam( centity_t *cent, int color );
 void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int atTime, vec3_t out );
 
