@@ -85,6 +85,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RDF_doFullbright	64		// Light Amp goggles
 #define RDF_ForceSightOn	128		// using force sight
 
+#define RDF_STEREO_FAR		256		// draws as if far away in sterescopic
+#define RDF_STEREO			512		// draws stereoscopic
+#define RDF_UI				1024	// 3D UI element
 
 extern int	skyboxportal;
 extern int	drawskyboxportal;

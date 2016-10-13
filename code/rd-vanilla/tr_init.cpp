@@ -185,6 +185,11 @@ cvar_t	*com_buildScript;
 cvar_t	*r_environmentMapping;
 cvar_t *r_screenshotJpegQuality;
 
+cvar_t *r_stereoSeparation;
+cvar_t *r_stereoDisplayWidth;
+cvar_t *r_stereoDisplayDistance;
+cvar_t *r_stereoEyeDistance;
+
 
 PFNGLACTIVETEXTUREARBPROC qglActiveTextureARB;
 PFNGLCLIENTACTIVETEXTUREARBPROC qglClientActiveTextureARB;
@@ -315,6 +320,7 @@ void R_Splash()
 			DrawSplash(GL_BACK);
 		}
 	}
+
 	GL_Present();
 }
 
@@ -759,6 +765,8 @@ static void GLimp_InitExtensions( void )
 	}
 }
 
+extern int giTextureBindNum;
+
 static void InitFramebuffers( void )
 {
 	if (glConfig.stereoEnabled != 2 || !qglGenFramebuffers)
@@ -766,10 +774,13 @@ static void InitFramebuffers( void )
 		return;
 	}
 
-	qglGenTextures(2, g_depthBuffer);
-	qglGenTextures(2, g_colorBuffer);
+	g_depthBuffer[0] = 1024 + giTextureBindNum++;
+	g_depthBuffer[1] = 1024 + giTextureBindNum++;
+	g_colorBuffer[0] = 1024 + giTextureBindNum++;
+	g_colorBuffer[1] = 1024 + giTextureBindNum++;
 	qglGenFramebuffers(2, g_fbo);
 
+	// left
 	qglBindTexture(GL_TEXTURE_2D, g_depthBuffer[0]);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -794,6 +805,7 @@ static void InitFramebuffers( void )
 		Com_Printf ("...framebuffer initialization failed\n" );
 	}
 
+	// right
 	qglBindTexture(GL_TEXTURE_2D, g_depthBuffer[1]);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1808,6 +1820,11 @@ Ghoul2 Insert End
 
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_AddCommand( commands[i].cmd, commands[i].func );
+
+	r_stereoSeparation		= ri.Cvar_Get( "r_stereoSeparation",	"3",	CVAR_ARCHIVE );
+	r_stereoDisplayWidth	= ri.Cvar_Get( "r_stereoDisplayWidth",	"52",	CVAR_ARCHIVE );
+	r_stereoDisplayDistance	= ri.Cvar_Get( "r_stereoDisplayDistance",	"76",	CVAR_ARCHIVE );
+	r_stereoEyeDistance		= ri.Cvar_Get( "r_stereoEyeDistance",	"2.4",	CVAR_ARCHIVE );
 }
 
 // need to do this hackery so ghoul2 doesn't crash the game because of ITS hackery...

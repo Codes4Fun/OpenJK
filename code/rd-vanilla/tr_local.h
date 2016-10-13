@@ -942,6 +942,10 @@ typedef struct {
 	byte		color2D[4];
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
+
+	qboolean	needPresent;
+
+	qboolean	stereoLeft;
 } backEndState_t;
 
 /*
@@ -1092,6 +1096,10 @@ extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
 extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for fullscreen
 extern cvar_t	*r_stereo;				// desired pixelformat stereo flag
+extern cvar_t	*r_stereoSeparation;	// eye separation in the game world
+extern cvar_t	*r_stereoDisplayWidth;	// width of the stereoscopic display
+extern cvar_t	*r_stereoDisplayDistance;	// distance of the stereoscopic display
+extern cvar_t	*r_stereoEyeDistance;	// distance between the pupils of your eyes
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth
 										// 16 = use 16-bit textures
@@ -1723,6 +1731,11 @@ typedef struct {
 
 typedef struct {
 	int		commandId;
+	int		iDissolvePercentage;
+} processDissolveCommand_t;
+
+typedef struct {
+	int		commandId;
 } swapBuffersCommand_t;
 
 typedef struct {
@@ -1738,6 +1751,17 @@ typedef struct {
 	float	s1, t1;
 	float	s2, t2;
 } stretchPicCommand_t;
+
+typedef struct {
+	int		commandId;
+	int		x;
+	int		y;
+	int		w;
+	int		h;
+	int		cols;
+	int		rows;
+	int		iClient;
+} stretchScratchCommand_t;
 
 typedef struct {
 	int		commandId;
@@ -1773,10 +1797,12 @@ typedef enum {
 	RC_END_OF_LIST,
 	RC_SET_COLOR,
 	RC_STRETCH_PIC,
+	RC_STRETCH_SCRATCH,
 	RC_SCISSOR,
 	RC_ROTATE_PIC,
 	RC_ROTATE_PIC2,
 	RC_DRAW_SURFS,
+	RC_PROCESS_DISSOLVE,
 	RC_DRAW_BUFFER,
 	RC_SWAP_BUFFERS,
 	RC_WORLD_EFFECTS,
@@ -1812,6 +1838,7 @@ void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 void RE_SetColor( const float *rgba );
 void RE_StretchPic ( float x, float y, float w, float h,
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
+void RE_StretchScratch ( int x, int y, int w, int h, int cols, int rows, int iClient );
 void RE_RotatePic ( float x, float y, float w, float h,
 					  float s1, float t1, float s2, float t2,float a, qhandle_t hShader );
 void RE_RotatePic2 ( float x, float y, float w, float h,
@@ -1822,6 +1849,7 @@ void RE_Scissor ( float x, float y, float w, float h);
 void RE_BeginFrame( stereoFrame_t stereoFrame );
 void RE_EndFrame( int *frontEndMsec, int *backEndMsec );
 qboolean	RE_ProcessDissolve(void);
+const void *RB_ProcessDissolve(const void *data);
 qboolean	RE_InitDissolve(qboolean bForceCircularExtroWipe);
 
 

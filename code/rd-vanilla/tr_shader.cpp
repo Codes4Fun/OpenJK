@@ -3429,10 +3429,6 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 		}
 	}
 
-	// make sure the render thread is stopped, because we are probably
-	// going to have to upload an image
-	R_IssuePendingRenderCommands(); //
-
 	// clear the global shader
 	ClearGlobalShader();
 	Q_strncpyz(shader.name, strippedName, sizeof(shader.name));

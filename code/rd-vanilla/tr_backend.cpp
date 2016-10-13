@@ -407,10 +407,12 @@ void GL_DrawBuffer( int buffer ) {
 		if (buffer == GL_BACK_LEFT)
 		{
 			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[0]);
+			backEnd.stereoLeft = qtrue;
 		}
 		else if (buffer == GL_BACK_RIGHT)
 		{
 			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[1]);
+			backEnd.stereoLeft = qfalse;
 		}
 		else
 		{
@@ -427,6 +429,10 @@ void GL_Present( void )
 {
 	if (glConfig.stereoEnabled == 2)
 	{
+		GLint viewport[4];
+		qglGetIntegerv(GL_VIEWPORT, viewport);
+		qglViewport(0,0,glConfig.vidWidth,glConfig.vidHeight);
+
 		qglBindFramebuffer(GL_FRAMEBUFFER, 0);
 		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 
@@ -487,6 +493,8 @@ void GL_Present( void )
 		qglPopMatrix();
 		qglMatrixMode(GL_MODELVIEW);
 		qglPopMatrix();
+
+		qglViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
 	}
 	ri.WIN_Present(&window);
 }
@@ -509,19 +517,73 @@ static void RB_Hyperspace( void ) {
 	c = ( backEnd.refdef.time & 255 ) / 255.0f;
 	qglClearColor( c, c, c, 1 );
 	qglClear( GL_COLOR_BUFFER_BIT );
+	backEnd.needPresent = qtrue;
 
 	backEnd.isHyperspace = qtrue;
 }
 
-
 void SetViewportAndScissor( void ) {
 	qglMatrixMode(GL_PROJECTION);
-	qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
+	if (glConfig.stereoEnabled)
+	{
+		qglLoadIdentity();
+		if (backEnd.refdef.rdflags & (RDF_STEREO|RDF_STEREO_FAR))
+		{
+			float tvStereoOffset = r_stereoEyeDistance->value / r_stereoDisplayWidth->value;
+			if (backEnd.stereoLeft)
+			{
+				qglTranslatef(-tvStereoOffset, 0.f, 0.f);
+			}
+			else
+			{
+				qglTranslatef(tvStereoOffset, 0.f, 0.f);
+			}
+		}
+
+		if (backEnd.refdef.rdflags & RDF_UI)
+		{
+			float zNear = r_znear->value;
+			float zFar	= backEnd.viewParms.zFar;
+			float scalex = r_stereoDisplayWidth->value *0.5f / r_stereoDisplayDistance->value;
+			float scaley = scalex * 480.f / 640.f;
+			float hwidth = zNear * scalex;
+			float hheight = zNear * scaley;
+			qglFrustum(-hwidth,hwidth,-hheight,hheight,zNear,zFar);
+		}
+		else
+		{
+			qglMultMatrixf( backEnd.viewParms.projectionMatrix );
+		}
+
+		if (backEnd.refdef.rdflags & RDF_STEREO)
+		{
+			float separation = r_stereoSeparation->value/2;
+			if (backEnd.stereoLeft)
+			{
+				qglTranslatef(separation, 0.f, 0.f);
+			}
+			else
+			{
+				qglTranslatef(-separation, 0.f, 0.f);
+			}
+		}
+	}
+	else
+	{
+		qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
+	}
 	qglMatrixMode(GL_MODELVIEW);
 
 	// set the window clipping
-	qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	if (backEnd.refdef.rdflags & RDF_UI)
+	{
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	}
+	else
+	{
+		qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	}
 	qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
 		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
 }
@@ -622,6 +684,7 @@ static void RB_BeginDrawingView (void) {
 	if (clearBits)
 	{
 		qglClear( clearBits );
+		backEnd.needPresent = qtrue;
 	}
 
 	if ( ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) )
@@ -1192,6 +1255,44 @@ const void *RB_StretchPic ( const void *data ) {
 
 /*
 =============
+RB_StretchScratch
+=============
+*/
+const void *RB_StretchScratch ( const void *data ) {
+	const stretchScratchCommand_t	*cmd;
+
+	cmd = (const stretchScratchCommand_t *)data;
+
+	if ( !backEnd.projection2D ) {
+		RB_SetGL2D();
+	}
+
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+
+	GL_Bind( tr.scratchImage[cmd->iClient] );
+
+	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
+
+	qglBegin (GL_QUADS);
+	qglTexCoord2f ( 0.5f / cmd->cols,  0.5f / cmd->rows );
+	qglVertex2f (cmd->x, cmd->y);
+	qglTexCoord2f ( ( cmd->cols - 0.5f ) / cmd->cols ,  0.5f / cmd->rows );
+	qglVertex2f (cmd->x+cmd->w, cmd->y);
+	qglTexCoord2f ( ( cmd->cols - 0.5f ) / cmd->cols, ( cmd->rows - 0.5f ) / cmd->rows );
+	qglVertex2f (cmd->x+cmd->w, cmd->y+cmd->h);
+	qglTexCoord2f ( 0.5f / cmd->cols, ( cmd->rows - 0.5f ) / cmd->rows );
+	qglVertex2f (cmd->x, cmd->y+cmd->h);
+	qglEnd ();
+	backEnd.needPresent = qtrue;
+
+	return (const void *)(cmd + 1);
+}
+
+
+/*
+=============
 RB_RotatePic
 =============
 */
@@ -1513,6 +1614,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 		qglClearColor(fog->parms.color[0],  fog->parms.color[1], fog->parms.color[2], 1.0f );
 		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		backEnd.needPresent = qtrue;
 	}
 	else if (!( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && tr.world && tr.world->globalFog != -1 && tr.sceneCount)//don't clear during menus, wait for real scene
 	{
@@ -1520,6 +1622,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 		qglClearColor(fog->parms.color[0],  fog->parms.color[1], fog->parms.color[2], 1.0f );
 		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+		backEnd.needPresent = qtrue;
 	}
 	else if ( r_clear->integer )
 	{	// clear screen for debugging
@@ -1558,6 +1661,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 			break;
 		}
 		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+		backEnd.needPresent = qtrue;
 	}
 
 	return (const void *)(cmd + 1);
@@ -1614,6 +1718,7 @@ void RB_ShowImages( void ) {
 			qglVertex2f( x, y + h );
 		qglEnd();
 		i++;
+		backEnd.needPresent = qtrue;
 	}
 
 	qglFinish();
@@ -1669,7 +1774,11 @@ const void	*RB_SwapBuffers( const void *data ) {
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 
-	GL_Present();
+	if (backEnd.needPresent)
+	{
+		GL_Present();
+		backEnd.needPresent = qfalse;
+	}
 
 	backEnd.projection2D = qfalse;
 
@@ -1702,11 +1811,7 @@ const void	*RB_WorldEffects( const void *data )
 RB_ExecuteRenderCommands
 ====================
 */
-void RB_ExecuteRenderCommands( const void *data ) {
-	int		t1, t2;
-
-	t1 = ri.Milliseconds ();
-
+static void ExecuteRenderCommands( const void *data, int buffer ) {
 	while ( 1 ) {
 		data = PADP(data, sizeof(void *));
 
@@ -1716,6 +1821,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			break;
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );
+			break;
+		case RC_STRETCH_SCRATCH:
+			data = RB_StretchScratch( data );
 			break;
 		case RC_ROTATE_PIC:
 			data = RB_RotatePic( data );
@@ -1729,24 +1837,52 @@ void RB_ExecuteRenderCommands( const void *data ) {
 		case RC_DRAW_SURFS:
 			data = RB_DrawSurfs( data );
 			break;
+		case RC_PROCESS_DISSOLVE:
+			data = RB_ProcessDissolve( data );
+			break;
 		case RC_DRAW_BUFFER:
+			((drawBufferCommand_t *)data)->buffer = buffer;
 			data = RB_DrawBuffer( data );
 			break;
 		case RC_SWAP_BUFFERS:
-			data = RB_SwapBuffers( data );
+			if (buffer == GL_BACK || buffer == GL_BACK_RIGHT)
+			{
+				data = RB_SwapBuffers( data );
+			}
+			else
+			{
+				data = (const void*)((swapBuffersCommand_t*)data + 1);
+			}
 			break;
 		case RC_WORLD_EFFECTS:
 			data = RB_WorldEffects( data );
 			break;
 		case RC_END_OF_LIST:
 		default:
-			// stop rendering
-			t2 = ri.Milliseconds ();
-			backEnd.pc.msec = t2 - t1;
 			return;
 		}
 	}
 
+}
+
+void RB_ExecuteRenderCommands( const void *data ) {
+	int		t1, t2;
+
+	t1 = ri.Milliseconds ();
+
+	if (glConfig.stereoEnabled)
+	{
+		ExecuteRenderCommands(data, GL_BACK_LEFT);
+		ExecuteRenderCommands(data, GL_BACK_RIGHT);
+	}
+	else
+	{
+		ExecuteRenderCommands(data, GL_BACK);
+	}
+
+	// stop rendering
+	t2 = ri.Milliseconds ();
+	backEnd.pc.msec = t2 - t1;
 }
 
 // What Pixel Shader type is currently active (regcoms or fragment programs).

@@ -1550,6 +1550,7 @@ public:
 			}
 		}
 		qglEnd();
+		backEnd.needPresent = qtrue;
 
 		qglEnable(GL_CULL_FACE);
 		qglPopMatrix();

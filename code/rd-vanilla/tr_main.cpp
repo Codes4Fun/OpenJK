@@ -286,12 +286,38 @@ void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const f
 			1 * modelMatrix[ i + 3 * 4 ];
 	}
 
+	if (glConfig.stereoEnabled)
+	{
+		float separation = r_stereoSeparation->value/2;
+		if (backEnd.stereoLeft)
+		{
+			eye[0] += separation;
+		}
+		else
+		{
+			eye[0] -= separation;
+		}
+	}
+
 	for ( i = 0 ; i < 4 ; i++ ) {
 		dst[i] =
 			eye[0] * projectionMatrix[ i + 0 * 4 ] +
 			eye[1] * projectionMatrix[ i + 1 * 4 ] +
 			eye[2] * projectionMatrix[ i + 2 * 4 ] +
 			eye[3] * projectionMatrix[ i + 3 * 4 ];
+	}
+
+	if (glConfig.stereoEnabled)
+	{
+		float tvStereoOffset = r_stereoEyeDistance->value / r_stereoDisplayWidth->value;
+		if (backEnd.stereoLeft)
+		{
+			dst[0] -= tvStereoOffset * dst[3];
+		}
+		else
+		{
+			dst[0] += tvStereoOffset * dst[3];
+		}
 	}
 }
 
@@ -1423,6 +1449,8 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 	}
 	qglEnd();
 	qglDepthRange( 0, 1 );
+
+	backEnd.needPresent = qtrue;
 }
 
 /*
