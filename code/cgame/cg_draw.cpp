@@ -2979,13 +2979,13 @@ static void CG_ScanForCrosshairEntity( qboolean scanAll )
 	int			content;
 	int			ignoreEnt = cg.snap->ps.clientNum;
 	Vehicle_t *pVeh = NULL;
+	vec3_t d_f, d_rt, d_up;
 
 	//FIXME: debounce this to about 10fps?
 
 	cg_forceCrosshair = qfalse;
 	if ( cg_entities[0].gent && cg_entities[0].gent->client ) // <-Mike said it should always do this   //if (cg_crosshairForceHint.integer &&
 	{//try to check for force-affectable stuff first
-	vec3_t d_f, d_rt, d_up;
 
 		// If you're riding a vehicle and not being drawn.
 		if ( ( pVeh = G_IsRidingVehicle( cg_entities[0].gent ) ) != NULL && cg_entities[0].currentState.eFlags & EF_NODRAW )
