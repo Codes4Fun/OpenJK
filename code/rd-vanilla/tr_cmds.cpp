@@ -243,6 +243,29 @@ void RE_StretchPic ( float x, float y, float w, float h,
 	cmd->t2 = t2;
 }
 
+
+/*
+=============
+RE_StretchScratch
+=============
+*/
+void RE_StretchScratch ( int x, int y, int w, int h, int cols, int rows, int iClient ) {
+	stretchScratchCommand_t	*cmd;
+
+	cmd = (stretchScratchCommand_t *) R_GetCommandBuffer( sizeof( *cmd ) );
+	if ( !cmd ) {
+		return;
+	}
+	cmd->commandId = RC_STRETCH_SCRATCH;
+	cmd->iClient = iClient;
+	cmd->x = x;
+	cmd->y = y;
+	cmd->w = w;
+	cmd->h = h;
+	cmd->cols = cols;
+	cmd->rows = rows;
+}
+
 /*
 =============
 RE_RotatePic
@@ -437,6 +460,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	}
 	cmd->commandId = RC_DRAW_BUFFER;
 
+#if 0
 	if ( glConfig.stereoEnabled ) {
 		if ( stereoFrame == STEREO_LEFT ) {
 			backEnd.stereoLeft = qtrue;
@@ -458,6 +482,9 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 			cmd->buffer = (int)GL_BACK;
 		}
 	}
+#else
+	cmd->buffer = (int)GL_BACK;
+#endif
 }
 
 

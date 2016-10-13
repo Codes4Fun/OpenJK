@@ -7138,7 +7138,7 @@ void Item_Model_Paint(itemDef_t *item)
 
 	// setup the refdef
 	memset( &refdef, 0, sizeof( refdef ) );
-	refdef.rdflags = RDF_NOWORLDMODEL;
+	refdef.rdflags = RDF_NOWORLDMODEL | RDF_STEREO | RDF_UI;
 	AxisClear( refdef.viewaxis );
 	x = item->window.rect.x+1;
 	y = item->window.rect.y+1;
@@ -7206,6 +7206,48 @@ void Item_Model_Paint(itemDef_t *item)
 
 	AnglesToAxis( angles, ent.axis );
 
+	ui.R_AddLightToScene(refdef.vieworg, 500, 1, 1, 1);	//fixme: specify in menu file!
+
+	// original viewport fov
+	float tanx = tanf( refdef.fov_x * M_PI / 360.f);
+	float tany = tanf( refdef.fov_y * M_PI / 360.f);
+
+	// original viewport rectangle
+	x = item->window.rect.x+1;
+	y = item->window.rect.y+1;
+	w = item->window.rect.w-2;
+	h = item->window.rect.h-2;
+
+	// scale to make it look smaller
+	static float UI_scale = 0.1f;
+
+	// original viewport scaling
+	float scale_x = w * UI_scale / (2.f * origin[0] * tanx);
+	float scale_y = h * UI_scale / (2.f * origin[0] * tany);
+	float scale_z = scale_x;
+
+	// recompute origin by projecting origin to viewspace
+	// and placing in a virtual 3d ui space
+	float displayWidth = DC->getCVarValue("r_stereoDisplayWidth");
+	float displayDistance = DC->getCVarValue("r_stereoDisplayDistance");
+	float scalex = displayWidth *0.5f / displayDistance;
+	float UI_z = -320.f / scalex;
+	origin[1] = -UI_scale * (w * (0.5f - 0.5f * origin[1] / (origin[0] * tanx)) + x - 320.f);
+	origin[2] = -UI_scale * (h * (0.5f - 0.5f * origin[2] / (origin[0] * tany)) + y - 240.f);
+	origin[0] = -(UI_z - maxs[2]) * UI_scale;
+
+	// apply viewport scaling
+	ent.axis[0][0] = ent.axis[0][0] * scale_z;
+	ent.axis[0][1] = ent.axis[0][1] * scale_z;
+	ent.axis[0][2] = ent.axis[0][2] * scale_z;
+	ent.axis[1][0] = ent.axis[1][0] * scale_x;
+	ent.axis[1][1] = ent.axis[1][1] * scale_x;
+	ent.axis[1][2] = ent.axis[1][2] * scale_x;
+	ent.axis[2][0] = ent.axis[2][0] * scale_y;
+	ent.axis[2][1] = ent.axis[2][1] * scale_y;
+	ent.axis[2][2] = ent.axis[2][2] * scale_y;
+	ent.nonNormalizedAxes = 1;
+
 	if (item->flags&ITF_G2VALID)
 	{
 		ent.ghoul2 = &item->ghoul2;
@@ -7235,8 +7277,6 @@ void Item_Model_Paint(itemDef_t *item)
 	// Set up lighting
 	//VectorCopy( refdef.vieworg, ent.lightingOrigin );
 	ent.renderfx = RF_NOSHADOW;
-
-	ui.R_AddLightToScene(refdef.vieworg, 500, 1, 1, 1);	//fixme: specify in menu file!
 
 	DC->addRefEntityToScene( &ent );
 	DC->renderScene( &refdef );

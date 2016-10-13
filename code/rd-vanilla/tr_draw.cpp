@@ -43,15 +43,6 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 		return;
 	}
 
-	R_IssuePendingRenderCommands();
-
-	if ( tess.numIndexes ) {
-		RB_EndSurface();
-	}
-
-	// we definately want to sync every frame for the cinematics
-	qglFinish();
-
 #ifdef TIMEBIND
 	int start, end;
 	start = end = 0;	// only to stop compiler whining, don't need to be initialised
@@ -118,25 +109,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 		}
 	}
 
-
-	extern void	RB_SetGL2D (void);
-	if (!backEnd.projection2D)
-	{
-		RB_SetGL2D();
-	}
-	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
-
-	qglBegin (GL_QUADS);
-	qglTexCoord2f ( 0.5f / cols,  0.5f / rows );
-	qglVertex2f (x, y);
-	qglTexCoord2f ( ( cols - 0.5f ) / cols ,  0.5f / rows );
-	qglVertex2f (x+w, y);
-	qglTexCoord2f ( ( cols - 0.5f ) / cols, ( rows - 0.5f ) / rows );
-	qglVertex2f (x+w, y+h);
-	qglTexCoord2f ( 0.5f / cols, ( rows - 0.5f ) / rows );
-	qglVertex2f (x, y+h);
-	qglEnd ();
-	backEnd.needPresent = qtrue;
+	RE_StretchScratch (x, y, w, h, cols, rows, iClient);
 }
 
 
@@ -415,12 +388,6 @@ static void RE_Blit(float fX0, float fY0, float fX1, float fY1, float fX2, float
 					image_t *pImage, int iGLState
 					)
 {
-	//
-	// some junk they had at the top of other StretchRaw code...
-	//
-	R_IssuePendingRenderCommands();
-//	qglFinish();
-
 	GL_Bind( pImage );
 	GL_State(iGLState);
 	GL_Cull( CT_TWO_SIDED ) ;
@@ -468,292 +435,310 @@ static void RE_KillDissolve(void)
 								Dissolve.pImage = NULL;
 	}
 }
+
+qboolean RE_ProcessDissolve(void)
+{
+	processDissolveCommand_t *cmd;
+
+	if (!Dissolve.iStartTime)
+	{
+		return qfalse;
+	}
+
+	if (Dissolve.bTouchNeeded)
+	{
+		// Stuff to avoid music stutter...
+		//
+		//	The problem is, that if I call RE_InitDissolve() then call RestartMusic, then by the time the music
+		//	has loaded in if it took longer than one second the dissolve would think that it had finished,
+		//	even if it had never actually drawn up. However, if I called RE_InitDissolve() AFTER the music had
+		//	restarted, then the music would stutter on slow video cards or CPUs while I did the binding/resampling.
+		//
+		// This way, I restart the millisecond counter the first time we actually get as far as rendering, which
+		//	should let things work properly...
+		//
+		Dissolve.bTouchNeeded = qfalse;
+		Dissolve.iStartTime = ri.Milliseconds();
+	}
+
+	int iDissolvePercentage = ((ri.Milliseconds() - Dissolve.iStartTime)*100) / (1000.0f * fDISSOLVE_SECONDS);
+
+//	ri.Printf(PRINT_ALL,"iDissolvePercentage %d\n",iDissolvePercentage);
+
+	if (iDissolvePercentage > 100)
+	{
+		RE_KillDissolve();
+		return qfalse;
+	}
+
+	cmd = (processDissolveCommand_t *) R_GetCommandBuffer( sizeof( *cmd ) );
+	if ( !cmd ) {
+		return qfalse;
+	}
+	cmd->commandId = RC_PROCESS_DISSOLVE;
+	cmd->iDissolvePercentage = iDissolvePercentage;
+	return qfalse;
+}
 // Draw the dissolve pic to the screen, over the top of what's already been rendered.
 //
 // return = qtrue while still processing, for those interested...
 //
 #define iSAFETY_SPRITE_OVERLAP 2	// #pixels to overlap blit region by, in case some drivers leave onscreen seams
-qboolean RE_ProcessDissolve(void)
+const void *RB_ProcessDissolve(const void *data)
 {
-	if (Dissolve.iStartTime)
+	processDissolveCommand_t *cmd;
+	cmd = (processDissolveCommand_t*)data;
+
+	int iDissolvePercentage = cmd->iDissolvePercentage;
+
+	extern void	RB_SetGL2D (void);
+	RB_SetGL2D();
+
+//		GLdouble glD;
+//		qglGetDoublev(GL_DEPTH_CLEAR_VALUE,&glD);
+//		qglClearColor(0,0,0,1);
+	qglClearDepth(1.0f);
+	qglClear( GL_DEPTH_BUFFER_BIT );
+
+
+	float fXScaleFactor = (float)SCREEN_WIDTH / (float)Dissolve.iWidth;
+	float fYScaleFactor = (float)SCREEN_HEIGHT/ (float)Dissolve.iHeight;
+	float x0,y0, x1,y1,	x2,y2, x3,y3;
+
+	switch (Dissolve.eDissolveType)
 	{
-		if (Dissolve.bTouchNeeded)
+		case eDISSOLVE_RT_TO_LT:
 		{
-			// Stuff to avoid music stutter...
+			float fXboundary = (float) Dissolve.iWidth - (((float)(Dissolve.iWidth+Dissolve.pDissolve->width)*(float)iDissolvePercentage)/100.0f);
+
+			// blit the fuzzy-dissolve sprite...
 			//
-			//	The problem is, that if I call RE_InitDissolve() then call RestartMusic, then by the time the music
-			//	has loaded in if it took longer than one second the dissolve would think that it had finished,
-			//	even if it had never actually drawn up. However, if I called RE_InitDissolve() AFTER the music had
-			//	restarted, then the music would stutter on slow video cards or CPUs while I did the binding/resampling.
+			x0 = fXScaleFactor * fXboundary;
+			y0 = 0.0f;
+			x1 = fXScaleFactor * (fXboundary + Dissolve.pDissolve->width);
+			y1 = 0.0f;
+			x2 = x1;
+			y2 = fYScaleFactor * Dissolve.iHeight;
+			x3 = x0;
+			y3 = y2;
+
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
+
+			// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
+			// (to the left of fXboundary)
 			//
-			// This way, I restart the millisecond counter the first time we actually get as far as rendering, which
-			//	should let things work properly...
-			//
-			Dissolve.bTouchNeeded = qfalse;
-			Dissolve.iStartTime = ri.Milliseconds();
+			x0 = 0.0f;
+			y0 = 0.0f;
+			x1 = fXScaleFactor * (fXboundary + iSAFETY_SPRITE_OVERLAP);
+			y1 = 0.0f;
+			x2 = x1;
+			y2 = fYScaleFactor * Dissolve.iHeight;
+			x3 = x0;
+			y3 = y2;
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
 		}
+		break;
 
-		int iDissolvePercentage = ((ri.Milliseconds() - Dissolve.iStartTime)*100) / (1000.0f * fDISSOLVE_SECONDS);
-
-//		ri.Printf(PRINT_ALL,"iDissolvePercentage %d\n",iDissolvePercentage);
-
-		if (iDissolvePercentage <= 100)
+		case eDISSOLVE_LT_TO_RT:
 		{
-			extern void	RB_SetGL2D (void);
-			RB_SetGL2D();
+			float fXboundary = (((float)(Dissolve.iWidth+(2*Dissolve.pDissolve->width))*(float)iDissolvePercentage)/100.0f) - Dissolve.pDissolve->width;
 
-//			GLdouble glD;
-//			qglGetDoublev(GL_DEPTH_CLEAR_VALUE,&glD);
-//			qglClearColor(0,0,0,1);
-			qglClearDepth(1.0f);
-			qglClear( GL_DEPTH_BUFFER_BIT );
-
-
-			float fXScaleFactor = (float)SCREEN_WIDTH / (float)Dissolve.iWidth;
-			float fYScaleFactor = (float)SCREEN_HEIGHT/ (float)Dissolve.iHeight;
-			float x0,y0, x1,y1,	x2,y2, x3,y3;
-
-			switch (Dissolve.eDissolveType)
-			{
-				case eDISSOLVE_RT_TO_LT:
-				{
-					float fXboundary = (float) Dissolve.iWidth - (((float)(Dissolve.iWidth+Dissolve.pDissolve->width)*(float)iDissolvePercentage)/100.0f);
-
-					// blit the fuzzy-dissolve sprite...
-					//
-					x0 = fXScaleFactor * fXboundary;
-					y0 = 0.0f;
-					x1 = fXScaleFactor * (fXboundary + Dissolve.pDissolve->width);
-					y1 = 0.0f;
-					x2 = x1;
-					y2 = fYScaleFactor * Dissolve.iHeight;
-					x3 = x0;
-					y3 = y2;
-
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
-
-					// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
-					// (to the left of fXboundary)
-					//
-					x0 = 0.0f;
-					y0 = 0.0f;
-					x1 = fXScaleFactor * (fXboundary + iSAFETY_SPRITE_OVERLAP);
-					y1 = 0.0f;
-					x2 = x1;
-					y2 = fYScaleFactor * Dissolve.iHeight;
-					x3 = x0;
-					y3 = y2;
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
-				}
-				break;
-
-				case eDISSOLVE_LT_TO_RT:
-				{
-					float fXboundary = (((float)(Dissolve.iWidth+(2*Dissolve.pDissolve->width))*(float)iDissolvePercentage)/100.0f) - Dissolve.pDissolve->width;
-
-					// blit the fuzzy-dissolve sprite...
-					//
-					x0 = fXScaleFactor * (fXboundary + Dissolve.pDissolve->width);
-					y0 = 0.0f;
-					x1 = fXScaleFactor * fXboundary;
-					y1 = 0.0f;
-					x2 = x1;
-					y2 = fYScaleFactor * Dissolve.iHeight;
-					x3 = x0;
-					y3 = y2;
-
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
-
-					// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
-					// (to the right of fXboundary)
-					//
-					x0 = fXScaleFactor * (( fXboundary + Dissolve.pDissolve->width) - iSAFETY_SPRITE_OVERLAP);
-					y0 = 0.0f;
-					x1 = fXScaleFactor * Dissolve.iWidth;
-					y0 = 0.0f;
-					x2 = x1;
-					y2 = fYScaleFactor * Dissolve.iHeight;
-					x3 = x0;
-					y3 = y2;
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
-				}
-				break;
-
-				case eDISSOLVE_TP_TO_BT:
-				{
-					float fYboundary = (((float)(Dissolve.iHeight+(2*Dissolve.pDissolve->width))*(float)iDissolvePercentage)/100.0f) - Dissolve.pDissolve->width;
-
-					// blit the fuzzy-dissolve sprite...
-					//
-					x0 = 0.0f;
-					y0 = fYScaleFactor * (fYboundary + Dissolve.pDissolve->width);
-					x1 = x0;
-					y1 = fYScaleFactor * fYboundary;
-					x2 = fXScaleFactor * Dissolve.iWidth;
-					y2 = y1;
-					x3 = x2;
-					y3 = y0;
-
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
-
-					// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
-					// (underneath fYboundary)
-					//
-					x0 = 0.0f;
-					y0 = fYScaleFactor * ( (fYboundary + Dissolve.pDissolve->width) - iSAFETY_SPRITE_OVERLAP);
-					x1 = fXScaleFactor * Dissolve.iWidth;
-					y1 = y0;
-					x2 = x1;
-					y2 = fYScaleFactor * Dissolve.iHeight;
-					x3 = x0;
-					y3 = y2;
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
-				}
-				break;
-
-				case eDISSOLVE_BT_TO_TP:
-				{
-					float fYboundary = Dissolve.iHeight - (((float)(Dissolve.iHeight+Dissolve.pDissolve->width)*(float)iDissolvePercentage)/100.0f);
-
-					// blit the fuzzy-dissolve sprite...
-					//
-					x0 = 0.0f;
-					y0 = fYScaleFactor * fYboundary;
-					x1 = x0;
-					y1 = fYScaleFactor * (fYboundary + Dissolve.pDissolve->width);
-					x2 = fXScaleFactor * Dissolve.iWidth;
-					y2 = y1;
-					x3 = x2;
-					y3 = y0;
-
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
-
-					// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
-					// (above fYboundary)
-					//
-					x0 = 0.0f;
-					y0 = 0.0f;
-					x1 = fXScaleFactor * Dissolve.iWidth;
-					y1 = y0;
-					x2 = x1;
-					y2 = fYScaleFactor * (fYboundary + iSAFETY_SPRITE_OVERLAP);
-					x3 = x0;
-					y3 = y2;
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
-				}
-				break;
-
-				case eDISSOLVE_CIRCULAR_IN:
-				{
-					float fDiagZoom = ( ((float)Dissolve.iWidth*0.8) * (100-iDissolvePercentage))/100.0f;
-
-					//
-					// blit circular graphic...
-					//
-					x0 = fXScaleFactor * ((Dissolve.iWidth/2) - fDiagZoom);
-					y0 = fYScaleFactor * ((Dissolve.iHeight/2)- fDiagZoom);
-					x1 = fXScaleFactor * ((Dissolve.iWidth/2) + fDiagZoom);
-					y1 = y0;
-					x2 = x1;
-					y2 = fYScaleFactor * ((Dissolve.iHeight/2)+ fDiagZoom);
-					x3 = x0;
-					y3 = y2;
-
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
-				}
-				break;
-
-				case eDISSOLVE_CIRCULAR_OUT:
-				{
-					float fDiagZoom = ( ((float)Dissolve.iWidth*0.8) * iDissolvePercentage)/100.0f;
-
-					//
-					// blit circular graphic...
-					//
-					x0 = fXScaleFactor * ((Dissolve.iWidth/2) - fDiagZoom);
-					y0 = fYScaleFactor * ((Dissolve.iHeight/2)- fDiagZoom);
-					x1 = fXScaleFactor * ((Dissolve.iWidth/2) + fDiagZoom);
-					y1 = y0;
-					x2 = x1;
-					y2 = fYScaleFactor * ((Dissolve.iHeight/2)+ fDiagZoom);
-					x3 = x0;
-					y3 = y2;
-
-					RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
-					// now blit the 4 black squares around it to mask off the rest of the screen...
-					//
-					// LHS, top to bottom...
-					//
-					RE_Blit(0,0,								// x0,y0
-							x0+iSAFETY_SPRITE_OVERLAP,0,		// x1,y1
-							x0+iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),// x2,y2
-							0,(fYScaleFactor * Dissolve.iHeight),	// x3,y3,
-							Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
-							);
-
-					// RHS top to bottom...
-					//
-					RE_Blit(x1-iSAFETY_SPRITE_OVERLAP,0,		// x0,y0
-							(fXScaleFactor * Dissolve.iWidth),0,	// x1,y1
-							(fXScaleFactor * Dissolve.iWidth),(fYScaleFactor * Dissolve.iHeight),// x2,y2
-							x1-iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),	// x3,y3,
-							Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
-							);
-
-					// top...
-					//
-					RE_Blit(x0-iSAFETY_SPRITE_OVERLAP,0,		// x0,y0
-							x1+iSAFETY_SPRITE_OVERLAP,0,		// x1,y1
-							x1+iSAFETY_SPRITE_OVERLAP,y0 + iSAFETY_SPRITE_OVERLAP,	// x2,y2
-							x0-iSAFETY_SPRITE_OVERLAP,y0 + iSAFETY_SPRITE_OVERLAP,	// x3,y3
-							Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
-							);
-
-					// bottom...
-					//
-					RE_Blit(x0-iSAFETY_SPRITE_OVERLAP,y3-iSAFETY_SPRITE_OVERLAP,	// x0,y0
-							x1+iSAFETY_SPRITE_OVERLAP,y2-iSAFETY_SPRITE_OVERLAP,		// x1,y1
-							x1+iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),	// x2,y2
-							x0-iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),	// x3,y3
-							Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
-							);
-				}
-				break;
-
-				default:
-				{
-					assert(0);
-					iDissolvePercentage = 101;	// force a dissolve-kill
-					break;
-				}
-			}
-
-			// re-check in case we hit the default case above...
+			// blit the fuzzy-dissolve sprite...
 			//
-			if (iDissolvePercentage <= 100)
-			{
-				// still dissolving, so now (finally), blit old image over top...
-				//
-				x0 = 0.0f;
-				y0 = 0.0f;
-				x1 = fXScaleFactor * Dissolve.pImage->width;
-				y1 = y0;
-				x2 = x1;
-				y2 = fYScaleFactor * Dissolve.pImage->height;
-				x3 = x0;
-				y3 = y2;
+			x0 = fXScaleFactor * (fXboundary + Dissolve.pDissolve->width);
+			y0 = 0.0f;
+			x1 = fXScaleFactor * fXboundary;
+			y1 = 0.0f;
+			x2 = x1;
+			y2 = fYScaleFactor * Dissolve.iHeight;
+			x3 = x0;
+			y3 = y2;
 
-				RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pImage,GLS_DEPTHFUNC_EQUAL);
-			}
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
+
+			// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
+			// (to the right of fXboundary)
+			//
+			x0 = fXScaleFactor * (( fXboundary + Dissolve.pDissolve->width) - iSAFETY_SPRITE_OVERLAP);
+			y0 = 0.0f;
+			x1 = fXScaleFactor * Dissolve.iWidth;
+			y0 = 0.0f;
+			x2 = x1;
+			y2 = fYScaleFactor * Dissolve.iHeight;
+			x3 = x0;
+			y3 = y2;
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
 		}
+		break;
 
-		if (iDissolvePercentage > 100)
+		case eDISSOLVE_TP_TO_BT:
 		{
-			RE_KillDissolve();
+			float fYboundary = (((float)(Dissolve.iHeight+(2*Dissolve.pDissolve->width))*(float)iDissolvePercentage)/100.0f) - Dissolve.pDissolve->width;
+
+			// blit the fuzzy-dissolve sprite...
+			//
+			x0 = 0.0f;
+			y0 = fYScaleFactor * (fYboundary + Dissolve.pDissolve->width);
+			x1 = x0;
+			y1 = fYScaleFactor * fYboundary;
+			x2 = fXScaleFactor * Dissolve.iWidth;
+			y2 = y1;
+			x3 = x2;
+			y3 = y0;
+
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
+
+			// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
+			// (underneath fYboundary)
+			//
+			x0 = 0.0f;
+			y0 = fYScaleFactor * ( (fYboundary + Dissolve.pDissolve->width) - iSAFETY_SPRITE_OVERLAP);
+			x1 = fXScaleFactor * Dissolve.iWidth;
+			y1 = y0;
+			x2 = x1;
+			y2 = fYScaleFactor * Dissolve.iHeight;
+			x3 = x0;
+			y3 = y2;
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
+		}
+		break;
+
+		case eDISSOLVE_BT_TO_TP:
+		{
+			float fYboundary = Dissolve.iHeight - (((float)(Dissolve.iHeight+Dissolve.pDissolve->width)*(float)iDissolvePercentage)/100.0f);
+
+			// blit the fuzzy-dissolve sprite...
+			//
+			x0 = 0.0f;
+			y0 = fYScaleFactor * fYboundary;
+			x1 = x0;
+			y1 = fYScaleFactor * (fYboundary + Dissolve.pDissolve->width);
+			x2 = fXScaleFactor * Dissolve.iWidth;
+			y2 = y1;
+			x3 = x2;
+			y3 = y0;
+
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
+
+			// blit a blank thing over the area the old screen is to be displayed on to enable screen-writing...
+			// (above fYboundary)
+			//
+			x0 = 0.0f;
+			y0 = 0.0f;
+			x1 = fXScaleFactor * Dissolve.iWidth;
+			y1 = y0;
+			x2 = x1;
+			y2 = fYScaleFactor * (fYboundary + iSAFETY_SPRITE_OVERLAP);
+			x3 = x0;
+			y3 = y2;
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE);
+		}
+		break;
+
+		case eDISSOLVE_CIRCULAR_IN:
+		{
+			float fDiagZoom = ( ((float)Dissolve.iWidth*0.8) * (100-iDissolvePercentage))/100.0f;
+
+			//
+			// blit circular graphic...
+			//
+			x0 = fXScaleFactor * ((Dissolve.iWidth/2) - fDiagZoom);
+			y0 = fYScaleFactor * ((Dissolve.iHeight/2)- fDiagZoom);
+			x1 = fXScaleFactor * ((Dissolve.iWidth/2) + fDiagZoom);
+			y1 = y0;
+			x2 = x1;
+			y2 = fYScaleFactor * ((Dissolve.iHeight/2)+ fDiagZoom);
+			x3 = x0;
+			y3 = y2;
+
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
+		}
+		break;
+
+		case eDISSOLVE_CIRCULAR_OUT:
+		{
+			float fDiagZoom = ( ((float)Dissolve.iWidth*0.8) * iDissolvePercentage)/100.0f;
+
+			//
+			// blit circular graphic...
+			//
+			x0 = fXScaleFactor * ((Dissolve.iWidth/2) - fDiagZoom);
+			y0 = fYScaleFactor * ((Dissolve.iHeight/2)- fDiagZoom);
+			x1 = fXScaleFactor * ((Dissolve.iWidth/2) + fDiagZoom);
+			y1 = y0;
+			x2 = x1;
+			y2 = fYScaleFactor * ((Dissolve.iHeight/2)+ fDiagZoom);
+			x3 = x0;
+			y3 = y2;
+
+			RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pDissolve, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE | GLS_ATEST_LT_80);
+			// now blit the 4 black squares around it to mask off the rest of the screen...
+			//
+			// LHS, top to bottom...
+			//
+			RE_Blit(0,0,								// x0,y0
+					x0+iSAFETY_SPRITE_OVERLAP,0,		// x1,y1
+					x0+iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),// x2,y2
+					0,(fYScaleFactor * Dissolve.iHeight),	// x3,y3,
+					Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
+					);
+
+			// RHS top to bottom...
+			//
+			RE_Blit(x1-iSAFETY_SPRITE_OVERLAP,0,		// x0,y0
+					(fXScaleFactor * Dissolve.iWidth),0,	// x1,y1
+					(fXScaleFactor * Dissolve.iWidth),(fYScaleFactor * Dissolve.iHeight),// x2,y2
+					x1-iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),	// x3,y3,
+					Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
+					);
+
+			// top...
+			//
+			RE_Blit(x0-iSAFETY_SPRITE_OVERLAP,0,		// x0,y0
+					x1+iSAFETY_SPRITE_OVERLAP,0,		// x1,y1
+					x1+iSAFETY_SPRITE_OVERLAP,y0 + iSAFETY_SPRITE_OVERLAP,	// x2,y2
+					x0-iSAFETY_SPRITE_OVERLAP,y0 + iSAFETY_SPRITE_OVERLAP,	// x3,y3
+					Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
+					);
+
+			// bottom...
+			//
+			RE_Blit(x0-iSAFETY_SPRITE_OVERLAP,y3-iSAFETY_SPRITE_OVERLAP,	// x0,y0
+					x1+iSAFETY_SPRITE_OVERLAP,y2-iSAFETY_SPRITE_OVERLAP,		// x1,y1
+					x1+iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),	// x2,y2
+					x0-iSAFETY_SPRITE_OVERLAP,(fYScaleFactor * Dissolve.iHeight),	// x3,y3
+					Dissolve.pBlack, GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE
+					);
+		}
+		break;
+
+		default:
+		{
+			assert(0);
+			iDissolvePercentage = 101;	// force a dissolve-kill
+			break;
 		}
 	}
 
-	return qfalse;
+	// re-check in case we hit the default case above...
+	//
+	if (iDissolvePercentage <= 100)
+	{
+		// still dissolving, so now (finally), blit old image over top...
+		//
+		x0 = 0.0f;
+		y0 = 0.0f;
+		x1 = fXScaleFactor * Dissolve.pImage->width;
+		y1 = y0;
+		x2 = x1;
+		y2 = fYScaleFactor * Dissolve.pImage->height;
+		x3 = x0;
+		y3 = y2;
+
+		RE_Blit(x0,y0,x1,y1,x2,y2,x3,y3, Dissolve.pImage,GLS_DEPTHFUNC_EQUAL);
+	}
+
+	return (const void *)(cmd + 1);
 }
 
 // return = qtrue(success) else fail, for those interested...
