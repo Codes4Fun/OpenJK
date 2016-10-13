@@ -2541,7 +2541,65 @@ CROSSHAIR
 CG_DrawCrosshair
 =================
 */
-static void CG_DrawCrosshair( vec3_t worldPoint )
+static void CG_DrawCrosshair3D( vec3_t worldPoint, vec3_t d_f, vec3_t d_rt, vec3_t d_up, vec_t distance,
+	float w, float h, vec4_t ecolor, qhandle_t hShader)
+{
+	polyVert_t	verts[4];
+
+	static float maxdist = 775.f;
+	static float offset = -18.f;
+	float scale = distance*18.f/maxdist;
+	float hw = w/24.f*scale;
+	float hh = h/24.f*scale;
+	verts[0].xyz[0] = worldPoint[0] - d_rt[0]*hw + d_up[0]*hh + d_f[0]*offset;
+	verts[0].xyz[1] = worldPoint[1] - d_rt[1]*hw + d_up[1]*hh + d_f[1]*offset;
+	verts[0].xyz[2] = worldPoint[2] - d_rt[2]*hw + d_up[2]*hh + d_f[2]*offset;
+	verts[0].st[0] = 0;
+	verts[0].st[1] = 0;
+	verts[0].modulate[0] = ecolor[0] * 255;
+	verts[0].modulate[1] = ecolor[1] * 255;
+	verts[0].modulate[2] = ecolor[2] * 255;
+	verts[0].modulate[3] = ecolor[3] * 255;
+
+	verts[1].xyz[0] = worldPoint[0] + d_rt[0]*hw + d_up[0]*hh + d_f[0]*offset;
+	verts[1].xyz[1] = worldPoint[1] + d_rt[1]*hw + d_up[1]*hh + d_f[1]*offset;
+	verts[1].xyz[2] = worldPoint[2] + d_rt[2]*hw + d_up[2]*hh + d_f[2]*offset;
+	verts[1].st[0] = 1;
+	verts[1].st[1] = 0;
+	verts[1].modulate[0] = ecolor[0] * 255;
+	verts[1].modulate[1] = ecolor[1] * 255;
+	verts[1].modulate[2] = ecolor[2] * 255;
+	verts[1].modulate[3] = ecolor[3] * 255;
+
+	verts[2].xyz[0] = worldPoint[0] + d_rt[0]*hw - d_up[0]*hh + d_f[0]*offset;
+	verts[2].xyz[1] = worldPoint[1] + d_rt[1]*hw - d_up[1]*hh + d_f[1]*offset;
+	verts[2].xyz[2] = worldPoint[2] + d_rt[2]*hw - d_up[2]*hh + d_f[2]*offset;
+	verts[2].st[0] = 1;
+	verts[2].st[1] = 1;
+	verts[2].modulate[0] = ecolor[0] * 255;
+	verts[2].modulate[1] = ecolor[1] * 255;
+	verts[2].modulate[2] = ecolor[2] * 255;
+	verts[2].modulate[3] = ecolor[3] * 255;
+
+	verts[3].xyz[0] = worldPoint[0] - d_rt[0]*hw - d_up[0]*hh + d_f[0]*offset;
+	verts[3].xyz[1] = worldPoint[1] - d_rt[1]*hw - d_up[1]*hh + d_f[1]*offset;
+	verts[3].xyz[2] = worldPoint[2] - d_rt[2]*hw - d_up[2]*hh + d_f[2]*offset;
+	verts[3].st[0] = 0;
+	verts[3].st[1] = 1;
+	verts[3].modulate[0] = ecolor[0] * 255;
+	verts[3].modulate[1] = ecolor[1] * 255;
+	verts[3].modulate[2] = ecolor[2] * 255;
+	verts[3].modulate[3] = ecolor[3] * 255;
+
+	cgi_R_AddPolyToScene( hShader, 4, verts );
+}
+
+/*
+=================
+CG_DrawCrosshair
+=================
+*/
+static void CG_DrawCrosshair( vec3_t worldPoint, vec3_t d_f, vec3_t d_rt, vec3_t d_up, vec_t distance)
 {
 	float		w, h;
 	qhandle_t	hShader;
@@ -2757,19 +2815,14 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 		if ( !Q_stricmp( "misc_panel_turret", g_entities[cg.snap->ps.viewEntity].classname ))
 		{
 			// draws a custom crosshair that is twice as large as normal
-			cgi_R_DrawStretchPic( x + cg.refdef.x + 320 - w,
-				y + cg.refdef.y + 240 - h,
-				w * 2, h * 2, 0, 0, 1, 1, cgs.media.turretCrossHairShader );
-
+			CG_DrawCrosshair3D(worldPoint, d_f, d_rt, d_up, distance, 2*w, 2*h, ecolor, cgs.media.turretCrossHairShader);
 		}
 	}
 	else
 	{
 		hShader = cgs.media.crosshairShader[ cg_drawCrosshair.integer % NUM_CROSSHAIRS ];
 
-		cgi_R_DrawStretchPic( x + cg.refdef.x + 0.5 * (640 - w),
-			y + cg.refdef.y + 0.5 * (480 - h),
-			w, h, 0, 0, 1, 1, hShader );
+		CG_DrawCrosshair3D(worldPoint, d_f, d_rt, d_up, distance, w, h, ecolor, hShader);
 	}
 
 	if ( cg.forceCrosshairStartTime && cg_crosshairForceHint.integer ) // drawing extra bits
@@ -2782,10 +2835,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 		w *= 2.0f;
 		h *= 2.0f;
 
-		cgi_R_DrawStretchPic( x + cg.refdef.x + 0.5f * ( 640 - w ), y + cg.refdef.y + 0.5f * ( 480 - h ),
-								w, h,
-								0, 0, 1, 1,
-								cgs.media.forceCoronaShader );
+		CG_DrawCrosshair3D(worldPoint, d_f, d_rt, d_up, distance, w, h, ecolor, cgs.media.forceCoronaShader);
 	}
 
 	cgi_R_SetColor( NULL );
@@ -2935,7 +2985,7 @@ static void CG_ScanForCrosshairEntity( qboolean scanAll )
 	cg_forceCrosshair = qfalse;
 	if ( cg_entities[0].gent && cg_entities[0].gent->client ) // <-Mike said it should always do this   //if (cg_crosshairForceHint.integer &&
 	{//try to check for force-affectable stuff first
-		vec3_t d_f, d_rt, d_up;
+	vec3_t d_f, d_rt, d_up;
 
 		// If you're riding a vehicle and not being drawn.
 		if ( ( pVeh = G_IsRidingVehicle( cg_entities[0].gent ) ) != NULL && cg_entities[0].currentState.eFlags & EF_NODRAW )
@@ -3035,7 +3085,6 @@ static void CG_ScanForCrosshairEntity( qboolean scanAll )
 	{
 		if ( cg_dynamicCrosshair.integer )
 		{//100% accurate
-			vec3_t d_f, d_rt, d_up;
 			// If you're riding a vehicle and not being drawn.
 			if ( ( pVeh = G_IsRidingVehicle( cg_entities[0].gent ) ) != NULL && cg_entities[0].currentState.eFlags & EF_NODRAW )
 			{
@@ -3108,7 +3157,7 @@ static void CG_ScanForCrosshairEntity( qboolean scanAll )
 	}
 */
 	//draw crosshair at endpoint
-	CG_DrawCrosshair( trace.endpos );
+	CG_DrawCrosshair( trace.endpos, d_f, d_rt, d_up, Distance(trace.endpos, cg.refdef.vieworg) );
 
 	g_crosshairEntNum = trace.entityNum;
 	g_crosshairEntDist = 4096*trace.fraction;
@@ -4009,8 +4058,6 @@ static void CG_Draw2D( void )
 		//}
 
 
-		CG_DrawCrosshairNames();
-
 		CG_RunRocketLocking();
 
 		CG_DrawInventorySelect();
@@ -4275,6 +4322,17 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	if ( cg.zoomMode == 3 && cg.snap->ps.batteryCharge ) // doing the Light amp goggles thing
 	{
 		cgi_R_LAGoggles();
+	}
+
+	// draw 3d crosshair but treat like the old 2d crosshair
+	if ( !cg.levelShot
+		&& cg_draw2D.integer != 0
+		&& cg.snap->ps.pm_type != PM_INTERMISSION
+		&& !in_camera
+		&& !CG_RenderingFromMiscCamera()
+		&& cg.snap->ps.stats[STAT_HEALTH] > 0)
+	{
+		CG_DrawCrosshairNames();
 	}
 
 	if ( (cg.snap->ps.forcePowersActive&(1<<FP_SEE)) )
