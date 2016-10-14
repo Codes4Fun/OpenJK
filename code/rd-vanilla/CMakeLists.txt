@@ -67,6 +67,53 @@ if(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
     list(APPEND SPRDVanillaRendererIncludeDirectories ${MINIZIP_INCLUDE_DIRS})
     list(APPEND SPRDVanillaRendererLibraries          ${MINIZIP_LIBRARIES})
 
+
+	if(UseInternalOpenVR)
+		if(WIN32)
+			if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+				set(SPRDVanillaRendererLibraries
+					${SPRDVanillaRendererLibraries}
+					${OpenJKLibDir}/openvr/lib/win32/openvr_api.lib
+					)
+			else()
+				set(SPRDVanillaRendererLibraries
+					${SPRDVanillaRendererLibraries}
+					${OpenJKLibDir}/openvr/lib/win64/openvr_api.lib
+					)
+			endif()
+		endif(WIN32)
+
+		if(UNIX)
+			if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+				set(SPRDVanillaRendererLibraries
+					${SPRDVanillaRendererLibraries}
+					${OpenJKLibDir}/openvr/lib/linux32/libopenvr_api.so
+					)
+			else()
+				set(SPRDVanillaRendererLibraries
+					${SPRDVanillaRendererLibraries}
+					${OpenJKLibDir}/openvr/lib/linux64/libopenvr_api.so
+					)
+			endif()
+		endif(UNIX)
+
+		if(APPLE)
+			set(SPRDVanillaRendererLibraries
+				${SPRDVanillaRendererLibraries}
+				${OpenJKLibDir}/openvr/lib/osx32/libopenvr_api.dylib
+				)
+		endif(APPLE)
+
+		set(SPRDVanillaRendererIncludeDirectories
+			${SPRDVanillaRendererIncludeDirectories}
+			${OpenJKLibDir}/openvr/headers
+			)
+	else()
+		find_package(OPENVR REQUIRED)
+		list(APPEND SPRDVanillaRendererIncludeDirectories ${OPENVR_INCLUDE_DIR})
+		list(APPEND SPRDVanillaRendererLibraries ${OPENVR_LIBRARY})
+	endif()
+
     # Transparantly make use of all renderer directories
     list(APPEND SPRDVanillaRendererIncludeDirectories "${SPDir}/rd-common")
     list(APPEND SPRDVanillaRendererIncludeDirectories "${SPDir}/rd-vanilla")

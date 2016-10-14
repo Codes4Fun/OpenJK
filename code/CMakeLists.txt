@@ -98,6 +98,52 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		set(SPEngineLibraries ${SPEngineLibraries} ${SDL2_LIBRARY})
 	endif()
 
+	if(UseInternalOpenVR)
+		if(WIN32)
+			if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+				set(SPEngineLibraries
+					${SPEngineLibraries}
+					${OpenJKLibDir}/openvr/lib/win32/openvr_api.lib
+					)
+			else()
+				set(SPEngineLibraries
+					${SPEngineLibraries}
+					${OpenJKLibDir}/openvr/lib/win64/openvr_api.lib
+					)
+			endif()
+		endif(WIN32)
+
+		if(UNIX)
+			if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+				set(SPEngineLibraries
+					${SPEngineLibraries}
+					${OpenJKLibDir}/openvr/lib/linux32/libopenvr_api.so
+					)
+			else()
+				set(SPEngineLibraries
+					${SPEngineLibraries}
+					${OpenJKLibDir}/openvr/lib/linux64/libopenvr_api.so
+					)
+			endif()
+		endif(UNIX)
+
+		if(APPLE)
+			set(SPEngineLibraries
+				${SPEngineLibraries}
+				${OpenJKLibDir}/openvr/lib/osx32/libopenvr_api.dylib
+				)
+		endif(APPLE)
+
+		set(SPEngineIncludeDirectories
+			${SPEngineIncludeDirectories}
+			${OpenJKLibDir}/openvr/headers
+			)
+	else()
+		find_package(OPENVR REQUIRED)
+		set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENVR_INCLUDE_DIR})
+		set(SPEngineLibraries ${SPEngineLibraries} ${OPENVR_LIBRARY})
+	endif()
+
 	#    Source Files
 
 	# Client files

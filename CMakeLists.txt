@@ -55,6 +55,7 @@ set(UseInternalZlibDefault   OFF)
 set(UseInternalPNGDefault    OFF)
 set(UseInternalJPEGDefault   OFF)
 set(UseInternalSDL2Default   OFF)
+set(UseInternalOpenVRDefault ON)
 
 if(WIN32)
   set(UseInternalOpenALDefault ON)
@@ -73,6 +74,7 @@ option(UseInternalZlib   "If set, use bundled zlib."    ${UseInternalZlibDefault
 option(UseInternalPNG    "If set, use bundled libpng."  ${UseInternalPNGDefault})
 option(UseInternalJPEG   "If set, use bundled libjpeg." ${UseInternalJPEGDefault})
 option(UseInternalSDL2   "If set, use bundled SDL2."    ${UseInternalSDL2Default})
+option(UseInternalOpenVR "If set, use bundled OpenVR."  ${UseInternalOpenVRDefault})
 
 # This option won't appear on non-Apple platforms.
 if(APPLE)
