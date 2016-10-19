@@ -531,65 +531,8 @@ void RB_ProjectionShadowDeform( void ) {
 //update tr.screenImage
 void RB_CaptureScreenImage(void)
 {
-	int radX = 2048;
-	int radY = 2048;
-	int x = glConfig.vidWidth/2;
-	int y = glConfig.vidHeight/2;
-	int cX, cY;
-
 	GL_Bind( tr.screenImage );
-	//using this method, we could pixel-filter the texture and all sorts of crazy stuff.
-	//but, it is slow as hell.
-	/*
-	static byte *tmp = NULL;
-	if (!tmp)
-	{
-		tmp = (byte *)R_Malloc((sizeof(byte)*4)*(glConfig.vidWidth*glConfig.vidHeight), TAG_ICARUS, qtrue);
-	}
-	qglReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-	*/
-
-	if (radX > glConfig.maxTextureSize)
-	{
-		radX = glConfig.maxTextureSize;
-	}
-	if (radY > glConfig.maxTextureSize)
-	{
-		radY = glConfig.maxTextureSize;
-	}
-
-	while (glConfig.vidWidth < radX)
-	{
-		radX /= 2;
-	}
-	while (glConfig.vidHeight < radY)
-	{
-		radY /= 2;
-	}
-
-	cX = x-(radX/2);
-	cY = y-(radY/2);
-
-	if (cX+radX > glConfig.vidWidth)
-	{ //would it go off screen?
-		cX = glConfig.vidWidth-radX;
-	}
-	else if (cX < 0)
-	{ //cap it off at 0
-		cX = 0;
-	}
-
-	if (cY+radY > glConfig.vidHeight)
-	{ //would it go off screen?
-		cY = glConfig.vidHeight-radY;
-	}
-	else if (cY < 0)
-	{ //cap it off at 0
-		cY = 0;
-	}
-
-	qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, cX, cY, radX, radY, 0);
+	qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0);
 }
 
 
@@ -631,6 +574,8 @@ void RB_DistortionFill(void)
 	qglPushMatrix();
 	qglLoadIdentity();
 
+	float ratio = (480.f/640.f)/(glConfig.vidHeight/(float)glConfig.vidWidth);
+
 	if (tr_distortionStretch)
 	{ //override
 		spost = tr_distortionStretch;
@@ -643,14 +588,14 @@ void RB_DistortionFill(void)
 		{
 			spost = -spost;
 		}
-		spost *= 0.2f;
+		spost *= 0.2f * 0.5f * ratio;
 
 		spost2 = sin(tr.refdef.time*0.0005f);
 		if (spost2 < 0.0f)
 		{
 			spost2 = -spost2;
 		}
-		spost2 *= 0.08f;
+		spost2 *= 0.08f * 0.5f;
 	}
 
 	if (alpha != 1.0f)
@@ -696,14 +641,14 @@ void RB_DistortionFill(void)
 		{
 			spost = -spost;
 		}
-		spost *= 0.08f;
+		spost *= 0.08f * 0.5f * ratio;
 
 		spost2 = sin(tr.refdef.time*0.0008f);
 		if (spost2 < 0.0f)
 		{
 			spost2 = -spost2;
 		}
-		spost2 *= 0.2f;
+		spost2 *= 0.2f * 0.5f;
 
 		qglBegin(GL_QUADS);
 			qglColor4f(1.0f, 1.0f, 1.0f, alpha);
