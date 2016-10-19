@@ -1573,11 +1573,12 @@ void CIN_SetLooping(int handle, qboolean loop) {
 }
 
 // Text crawl defines
-#define TC_PLANE_WIDTH	250
-#define TC_PLANE_NEAR	90
-#define TC_PLANE_FAR	715
-#define TC_PLANE_TOP	0
-#define TC_PLANE_BOTTOM	1100
+#define TC_PLANE_NEAR	38.2f
+#define TC_PLANE_FAR	(TC_PLANE_NEAR*7.9444f)
+
+#define TC_PLANE_WIDTH	(TC_PLANE_NEAR * 1.0719f)
+#define TC_PLANE_TOP	(TC_PLANE_NEAR * -0.6293f)
+#define TC_PLANE_BOTTOM	((TC_PLANE_FAR - TC_PLANE_NEAR) * 0.4982f + TC_PLANE_TOP)
 
 #define TC_DELAY 9000
 #define TC_STOPTIME 81000
@@ -1589,16 +1590,16 @@ static void CIN_AddTextCrawl()
 	// Set up refdef
 	memset( &refdef, 0, sizeof( refdef ));
 
-	refdef.rdflags = RDF_NOWORLDMODEL;
+	refdef.rdflags = RDF_NOWORLDMODEL | RDF_STEREO | RDF_UI;
 	AxisClear( refdef.viewaxis );
 
-	refdef.fov_x = 130;
-	refdef.fov_y = 130;
+	refdef.fov_x = 80.f;
+	refdef.fov_y = 64.366f;
 
 	refdef.x = 0;
-	refdef.y = -50;
+	refdef.y = 0;
 	refdef.width = cls.glconfig.vidWidth;
-	refdef.height = cls.glconfig.vidHeight * 2; // deliberately extend off the bottom of the screen
+	refdef.height = cls.glconfig.vidHeight;
 
 	// use to set shaderTime for scrolling shaders
 	refdef.time = 0;

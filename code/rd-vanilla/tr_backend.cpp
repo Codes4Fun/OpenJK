@@ -731,8 +731,8 @@ static void VRUpdate()
 		hmdHeadMatrix[15] = 1;
 	}
 
-	VRCreateProjectionMatrix(vrUIProjectionLeftMatrix, true, 0.1f, 256);
-	VRCreateProjectionMatrix(vrUIProjectionRightMatrix, false, 0.1f, 256);
+	VRCreateProjectionMatrix(vrUIProjectionLeftMatrix, true, 0.1f, 512);
+	VRCreateProjectionMatrix(vrUIProjectionRightMatrix, false, 0.1f, 512);
 
 	VRCreateViewMatrix(vrFarViewMatrix,true,0);
 	VRCreateViewMatrix(vrViewLeftMatrix,true,r_stereoSeparation->value);
@@ -1832,6 +1832,12 @@ const void *RB_StretchScratch ( const void *data ) {
 		RB_EndSurface();
 	}
 
+	qglPushMatrix();
+
+	qglTranslatef(320.f,240.f,381.f);
+	qglScalef(9.f, 9.f, 9.f);
+	qglTranslatef(-320.f,-240.f,-381.f);
+
 	GL_Bind( tr.scratchImage[cmd->iClient] );
 
 	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
@@ -1847,6 +1853,8 @@ const void *RB_StretchScratch ( const void *data ) {
 	qglVertex2f (cmd->x, cmd->y+cmd->h);
 	qglEnd ();
 	backEnd.needPresent = qtrue;
+
+	qglPopMatrix();
 
 	return (const void *)(cmd + 1);
 }
