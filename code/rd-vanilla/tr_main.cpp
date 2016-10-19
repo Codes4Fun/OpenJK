@@ -274,9 +274,52 @@ R_TransformModelToClip
 
 ==========================
 */
+extern bool g_vrEnabled;
+extern float vrViewLeftMatrix[16];
+extern float vrViewRightMatrix[16];
+extern float vrProjectionMatrix[16];
 void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,
 							vec4_t eye, vec4_t dst ) {
 	int i;
+
+	if (g_vrEnabled)
+	{
+		float *hmdProjectionMatrix;
+		float *viewMatrix;
+		vec4_t view;
+		if (backEnd.stereoLeft)
+		{
+			viewMatrix = vrViewLeftMatrix;
+		}
+		else
+		{
+			viewMatrix = vrViewRightMatrix;
+		}
+		hmdProjectionMatrix = vrProjectionMatrix;
+		for ( i = 0 ; i < 4 ; i++ ) {
+			view[i] =
+				src[0] * modelMatrix[ i + 0 * 4 ] +
+				src[1] * modelMatrix[ i + 1 * 4 ] +
+				src[2] * modelMatrix[ i + 2 * 4 ] +
+				1 * modelMatrix[ i + 3 * 4 ];
+		}
+
+		for ( i = 0 ; i < 4 ; i++ ) {
+			eye[i] =
+				view[0] * viewMatrix[ i + 0 * 4 ] +
+				view[1] * viewMatrix[ i + 1 * 4 ] +
+				view[2] * viewMatrix[ i + 2 * 4 ] +
+				view[3] * viewMatrix[ i + 3 * 4 ];
+		}
+		for ( i = 0 ; i < 4 ; i++ ) {
+			dst[i] =
+				eye[0] * hmdProjectionMatrix[ i + 0 * 4 ] +
+				eye[1] * hmdProjectionMatrix[ i + 1 * 4 ] +
+				eye[2] * hmdProjectionMatrix[ i + 2 * 4 ] +
+				eye[3] * hmdProjectionMatrix[ i + 3 * 4 ];
+		}
+		return;
+	}
 
 	for ( i = 0 ; i < 4 ; i++ ) {
 		eye[i] =

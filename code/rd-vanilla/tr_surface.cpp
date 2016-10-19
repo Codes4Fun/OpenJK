@@ -2001,14 +2001,26 @@ RB_TestZFlare
 This is called at surface tesselation time
 ==================
 */
+extern bool g_vrEnabled;
+extern float vrProjectionMatrix[16];
 static bool RB_TestZFlare( vec3_t point) {
 	int				i;
 	vec4_t			eye, clip, normalized, window;
 
+	float * projectionMatrix;
+	if (g_vrEnabled)
+	{
+		projectionMatrix = vrProjectionMatrix;
+	}
+	else
+	{
+		projectionMatrix = backEnd.viewParms.projectionMatrix;
+	}
+
 	// if the point is off the screen, don't bother adding it
 	// calculate screen coordinates and depth
 	R_TransformModelToClip( point, backEnd.ori.modelMatrix,
-		backEnd.viewParms.projectionMatrix, eye, clip );
+		projectionMatrix, eye, clip );
 
 	// check to see if the point is completely off screen
 	for ( i = 0 ; i < 3 ; i++ ) {
@@ -2038,8 +2050,8 @@ static bool RB_TestZFlare( vec3_t point) {
 	glState.finishCalled = qfalse;
 	qglReadPixels( backEnd.viewParms.viewportX + window[0],backEnd.viewParms.viewportY + window[1], 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth );
 
-	screenZ = backEnd.viewParms.projectionMatrix[14] /
-		( ( 2*depth - 1 ) * backEnd.viewParms.projectionMatrix[11] - backEnd.viewParms.projectionMatrix[10] );
+	screenZ = projectionMatrix[14] /
+		( ( 2*depth - 1 ) * projectionMatrix[11] - projectionMatrix[10] );
 
 	visible = ( -eye[2] - -screenZ ) < 24;
 	return visible;

@@ -32,6 +32,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "../rd-common/tr_font.h"
 #include "tr_WorldEffects.h"
 
+#include <openvr.h>
+
 glconfig_t	glConfig;
 glstate_t	glState;
 window_t	window;
@@ -263,8 +265,8 @@ QGLDEFINE(glUniform2fv);
 
 bool g_bTextureRectangleHack = false;
 
+GLuint  g_depthBuffer;
 GLuint  g_fbo[2];
-GLuint  g_depthBuffer[2];
 GLuint  g_colorBuffer[2];
 
 void RE_SetLightStyle(int style, int color);
@@ -308,7 +310,7 @@ void R_Splash()
 		RB_SetGL2D();
 
 		GL_Bind( pImage );
-		GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
+		GL_State(GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 
 		if (glConfig.stereoEnabled)
 		{
@@ -765,8 +767,6 @@ static void GLimp_InitExtensions( void )
 	}
 }
 
-extern int giTextureBindNum;
-
 static void InitFramebuffers( void )
 {
 	if (glConfig.stereoEnabled != 2 || !qglGenFramebuffers)
@@ -774,20 +774,15 @@ static void InitFramebuffers( void )
 		return;
 	}
 
-	g_depthBuffer[0] = 1024 + giTextureBindNum++;
-	g_depthBuffer[1] = 1024 + giTextureBindNum++;
-	g_colorBuffer[0] = 1024 + giTextureBindNum++;
-	g_colorBuffer[1] = 1024 + giTextureBindNum++;
+	qglGenRenderbuffers(1, &g_depthBuffer);
+	qglGenTextures(2, g_colorBuffer);
 	qglGenFramebuffers(2, g_fbo);
 
-	// left
-	qglBindTexture(GL_TEXTURE_2D, g_depthBuffer[0]);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	qglTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, glConfig.vidWidth, glConfig.vidHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	// shared depth+stencil buffer
+	qglBindRenderbuffer(GL_RENDERBUFFER, g_depthBuffer);
+	qglRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight);
 
+	// left
 	qglBindTexture(GL_TEXTURE_2D, g_colorBuffer[0]);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -797,7 +792,7 @@ static void InitFramebuffers( void )
 
 	qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[0]);
 	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_colorBuffer[0], 0);
-	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, g_depthBuffer[0], 0);
+	qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, g_depthBuffer);
 
 	GLenum status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE)
@@ -806,13 +801,6 @@ static void InitFramebuffers( void )
 	}
 
 	// right
-	qglBindTexture(GL_TEXTURE_2D, g_depthBuffer[1]);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	qglTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, glConfig.vidWidth, glConfig.vidHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-
 	qglBindTexture(GL_TEXTURE_2D, g_colorBuffer[1]);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -822,13 +810,118 @@ static void InitFramebuffers( void )
 
 	qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[1]);
 	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_colorBuffer[1], 0);
-	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, g_depthBuffer[1], 0);
+	qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, g_depthBuffer);
 
 	status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE)
 	{
 		Com_Printf ("...framebuffer initialization failed\n" );
 	}
+}
+
+void MatrixSetProjection(
+	float * projectionMatrix,
+	float tanFovLeft, float tanFovRight,
+	float tanFovBottom, float tanFovTop,
+	float zNear, float zFar);
+
+void Convert4x3Matrix(vr::HmdMatrix34_t *i, float *o)
+{
+	o[0] = i->m[0][0];
+	o[1] = i->m[1][0];
+	o[2] = i->m[2][0];
+	o[3] = 0;
+	o[4] = i->m[0][1];
+	o[5] = i->m[1][1];
+	o[6] = i->m[2][1];
+	o[7] = 0;
+	o[8] = i->m[0][2];
+	o[9] = i->m[1][2];
+	o[10] = i->m[2][2];
+	o[11] = 0;
+	o[12] = i->m[0][3];
+	o[13] = i->m[1][3];
+	o[14] = i->m[2][3];
+	o[15] = 1;
+}
+
+bool g_vrEnabled;
+vr::IVRSystem * hmd;
+float hmdFovLeft[4];
+float hmdFovRight[4];
+float hmdEyeLeft[16];
+float hmdEyeRight[16];
+float hmdProjectionLeft[16];
+float hmdProjectionRight[16];
+bool g_OVRCompositor;
+bool g_OVRCompositorDebug = true;
+int g_vidWidth;
+int g_vidHeight;
+
+void MatrixSimpleInverse(float * _m);
+
+static bool VRInitialize()
+{
+	vr::EVRInitError error = vr::VRInitError_None;
+	hmd = vr::VR_Init( &error, vr::VRApplication_Scene );
+	if ( error != vr::VRInitError_None )
+	{
+		Com_Printf ("VR initialization failed: %s\n", vr::VR_GetVRInitErrorAsEnglishDescription( error ) );
+		g_vrEnabled = false;
+		return false;
+	}
+	g_vrEnabled = true;
+
+	if ( !vr::VRCompositor() )
+	{
+		Com_Printf( "VR compositor not present.\n" );
+		g_OVRCompositor = false;
+		g_OVRCompositorDebug = true;
+	}
+	else
+	{
+		g_OVRCompositor = true;
+		g_OVRCompositorDebug = true;//false;
+		vr::VRCompositor()->ForceInterleavedReprojectionOn( true );
+		vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
+	}
+
+	g_vidWidth = glConfig.vidWidth;
+	g_vidHeight = glConfig.vidHeight;
+#if 0
+	glConfig.vidWidth = 960;
+	glConfig.vidHeight = 1080;
+#else
+	hmd->GetRecommendedRenderTargetSize( (uint32_t*)&glConfig.vidWidth, (uint32_t*)&glConfig.vidHeight );
+#endif
+
+	hmd->GetProjectionRaw( vr::Eye_Left,
+		&hmdFovLeft[0], &hmdFovLeft[1],
+		&hmdFovLeft[3], &hmdFovLeft[2]);
+	MatrixSetProjection(hmdProjectionLeft,
+		hmdFovLeft[0], hmdFovLeft[1],
+		hmdFovLeft[2], hmdFovLeft[3],
+		1, 128);
+
+	hmd->GetProjectionRaw( vr::Eye_Right,
+		&hmdFovRight[0], &hmdFovRight[1],
+		&hmdFovRight[3], &hmdFovRight[2]);
+	MatrixSetProjection(hmdProjectionRight,
+		hmdFovRight[0], hmdFovRight[1],
+		hmdFovRight[2], hmdFovRight[3],
+		1, 128);
+
+	vr::HmdMatrix34_t mat;
+	
+	mat = hmd->GetEyeToHeadTransform( vr::Eye_Left );
+	Convert4x3Matrix(&mat, hmdEyeLeft);
+	MatrixSimpleInverse(hmdEyeLeft);
+
+	mat = hmd->GetEyeToHeadTransform( vr::Eye_Right );
+	Convert4x3Matrix(&mat, hmdEyeRight);
+	MatrixSimpleInverse(hmdEyeRight);
+
+	return true;
 }
 
 /*
@@ -876,6 +969,8 @@ static void InitOpenGL( void )
 
 		// set default state
 		GL_SetDefaultState();
+
+		VRInitialize();
 
 		// initalize framebuffers if we need them
 		InitFramebuffers();
@@ -1601,6 +1696,14 @@ void R_FogColor_f(void)
 			                          atof(ri.Cmd_Argv(3)) * tr.identityLight, 1.0 );
 }
 
+void VR_ResetPose_f( void )
+{
+	if (g_vrEnabled)
+	{
+		hmd->ResetSeatedZeroPose();
+	}
+}
+
 typedef struct consoleCommand_s {
 	const char	*cmd;
 	xcommand_t	func;
@@ -1625,6 +1728,7 @@ static consoleCommand_t	commands[] = {
 	{ "r_fogDistance",		R_FogDistance_f },
 	{ "r_fogColor",			R_FogColor_f },
 	{ "r_reloadfonts",		R_ReloadFonts_f },
+	{ "vr_resetPose", VR_ResetPose_f },
 };
 
 static const size_t numCommands = ARRAY_LEN( commands );

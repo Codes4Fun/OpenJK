@@ -910,6 +910,8 @@ typedef struct {
 	int			texEnv[2];
 	int			faceCulling;
 	uint32_t	glStateBits;
+	uint32_t	glStateOverrideMask;
+	uint32_t	glStateOverrideBits;
 } glstate_t;
 
 

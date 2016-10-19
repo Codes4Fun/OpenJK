@@ -26,6 +26,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "tr_local.h"
 #include "tr_common.h"
 
+#include <openvr.h>
+
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
 
@@ -202,6 +204,34 @@ void GL_TexEnv( int env )
 }
 
 /*
+** GL_StateOverride
+**
+** This routine overrides states set by shaders.
+** stateMask are bits we want, stateBits are what are set.
+*/
+void GL_StateOverride(uint32_t stateMask, uint32_t stateBits)
+{
+	glState.glStateOverrideMask = ~stateMask;
+	glState.glStateOverrideBits = stateBits & stateMask;
+	GL_State(glState.glStateBits);
+}
+
+/*
+** GL_IsStateSet
+**
+** This routine checks if a state was set.
+*/
+qboolean GL_IsStateSet(uint32_t stateMask, uint32_t stateBits)
+{
+	stateBits = (stateBits & glState.glStateOverrideMask) | glState.glStateOverrideBits;
+	if ((glState.glStateBits & stateMask) == stateBits)
+	{
+		return qtrue;
+	}
+	return qfalse;
+}
+
+/*
 ** GL_State
 **
 ** This routine is responsible for setting the most commonly changed state
@@ -209,6 +239,7 @@ void GL_TexEnv( int env )
 */
 void GL_State( uint32_t stateBits )
 {
+	stateBits = (stateBits & glState.glStateOverrideMask) | glState.glStateOverrideBits;
 	uint32_t diff = stateBits ^ glState.glStateBits;
 
 	if ( !diff )
@@ -396,11 +427,438 @@ void GL_State( uint32_t stateBits )
 	glState.glStateBits = stateBits;
 }
 
+void MatrixLoadIdentity(float * matrix)
+{
+	memset(matrix, 0, sizeof(*matrix)*16);
+	matrix[0] = 1;
+	matrix[5] = 1;
+	matrix[10] = 1;
+	matrix[15] = 1;
+}
+
+void MatrixLoadScale(float * matrix, float x, float y, float z)
+{
+	memset(matrix, 0, sizeof(*matrix)*16);
+	matrix[0] = x;
+	matrix[5] = y;
+	matrix[10] = z;
+	matrix[15] = 1;
+}
+
+void MatrixScale(float * matrix, float x, float y, float z)
+{
+	const float *a = matrix;
+	float a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
+		a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7],
+		a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11],
+		a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+	matrix[0] *= x;
+	matrix[1] *= x;
+	matrix[2] *= x;
+	matrix[3] *= x;
+
+	matrix[4] *= y;
+	matrix[5] *= y;
+	matrix[6] *= y;
+	matrix[7] *= y;
+
+	matrix[8] *= z;
+	matrix[9] *= z;
+	matrix[10] *= z;
+	matrix[11] *= z;
+}
+
+void MatrixMultiply(float * matrix, const float * first)
+{
+	const float *a = matrix;
+	const float *b = first;
+	float a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
+		a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7],
+		a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11],
+		a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+	float b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];  
+	matrix[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+	matrix[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+	matrix[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+	matrix[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+	b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+	matrix[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+	matrix[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+	matrix[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+	matrix[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+	b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+	matrix[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+	matrix[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+	matrix[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+	matrix[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+	b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+	matrix[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+	matrix[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+	matrix[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+	matrix[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+}
+
+void MatrixSimpleInverse(float * _m)
+{
+	float temp1, temp2, temp3;
+	float tx, ty, tz, tw;
+	float sx, sy, sz;
+
+	// get the scale
+	sx = 1.f/VectorLength(_m);
+	sy = 1.f/VectorLength(_m + 4);
+	sz = 1.f/VectorLength(_m + 8);
+
+	// normalize
+	VectorScale(_m, sx, _m);
+	VectorScale(_m + 4, sy, _m + 4);
+	VectorScale(_m + 8, sz, _m + 8);
+
+	// inverse rotation
+	temp1 = _m[1];
+	temp2 = _m[2];
+	temp3 = _m[6];
+	_m[1] = _m[4];
+	_m[2] = _m[8];
+	_m[6] = _m[9];
+	_m[4] = temp1;
+	_m[8] = temp2;
+	_m[9] = temp3;
+
+	// inverse scale
+	VectorScale(_m, sx, _m);
+	VectorScale(_m + 4, sy, _m + 4);
+	VectorScale(_m + 8, sz, _m + 8);
+
+	// inverse translation
+	tx = _m[12] * _m[0]
+	   + _m[13] * _m[4]
+	   + _m[14] * _m[8];
+	ty = _m[12] * _m[1]
+	   + _m[13] * _m[5]
+	   + _m[14] * _m[9];
+	tz = _m[12] * _m[2]
+	   + _m[13] * _m[6]
+	   + _m[14] * _m[10];
+	tw = _m[12] * _m[3]
+	   + _m[13] * _m[7]
+	   + _m[14] * _m[11]
+	   + _m[15];
+
+	_m[12] = -tx;
+	_m[13] = -ty;
+	_m[14] = -tz;
+	_m[15] = tw;
+}
+
+void MatrixSetProjection(
+	float * projectionMatrix,
+	float tanFovLeft, float tanFovRight,
+	float tanFovBottom, float tanFovTop,
+	float zNear, float zFar)
+{
+	float	xmin, xmax, ymin, ymax;
+	float	width, height, depth;
+
+	ymax = tanFovBottom;
+	ymin = tanFovTop;
+	xmax = tanFovRight;
+	xmin = tanFovLeft;
+	width = xmax - xmin;
+	height = ymax - ymin;
+	depth = zFar - zNear;
+
+	projectionMatrix[0] = 2 / width;
+	projectionMatrix[4] = 0;
+	projectionMatrix[8] = ( xmax + xmin ) / width;	// normally 0
+	projectionMatrix[12] = 0;
+
+	projectionMatrix[1] = 0;
+	projectionMatrix[5] = 2 / height;
+	projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
+	projectionMatrix[13] = 0;
+
+	projectionMatrix[2] = 0;
+	projectionMatrix[6] = 0;
+	projectionMatrix[10] = -( zFar + zNear ) / depth;
+	projectionMatrix[14] = -2 * zFar * zNear / depth;
+
+	projectionMatrix[3] = 0;
+	projectionMatrix[7] = 0;
+	projectionMatrix[11] = -1;
+	projectionMatrix[15] = 0;
+}
+
+void MatrixSetProjectionNearFar(float *projectionMatrix, float zNear, float zFar)
+{
+	float depth = zFar - zNear;
+	projectionMatrix[10] = -( zFar + zNear ) / depth;
+	projectionMatrix[14] = -2 * zFar * zNear / depth;
+}
+
+extern bool g_vrEnabled;
+extern vr::IVRSystem * hmd;
+extern float hmdFovLeft[4];
+extern float hmdFovRight[4];
+extern float hmdEyeLeft[16];
+extern float hmdEyeRight[16];
+extern bool g_OVRCompositor;
+extern bool g_OVRCompositorDebug;
+extern int g_vidWidth;
+extern int g_vidHeight;
+extern float hmdProjectionLeft[16];
+extern float hmdProjectionRight[16];
+float hmdHeadMatrix[16];
+
+float vrUIProjectionLeftMatrix[16];
+float vrUIProjectionRightMatrix[16];
+float vrFarViewMatrix[16];
+float vrViewLeftMatrix[16];
+float vrViewRightMatrix[16];
+float vrUIViewLeftMatrix[16];
+float vrUIViewRightMatrix[16];
+
+float vrProjectionMatrix[16];
+
+void VRCreateProjectionMatrix(float * matrix, bool leftEye, float zNear, float zFar)
+{
+	float *hmdProjection;
+	if (leftEye)
+	{
+		hmdProjection = hmdProjectionLeft;
+	}
+	else
+	{
+		hmdProjection = hmdProjectionRight;
+	}
+	memcpy(matrix, hmdProjection, sizeof(*matrix)*16);
+	MatrixSetProjectionNearFar(matrix, zNear, zFar);
+}
+
+void VRCreateViewMatrix(float * matrix, bool leftEye, float separation)
+{
+	float *vrEyeMatrix;
+	if (leftEye)
+	{
+		vrEyeMatrix = hmdEyeLeft;
+	}
+	else
+	{
+		vrEyeMatrix = hmdEyeRight;
+	}
+	if (separation != 0)
+	{
+		float eyeScale = fabs(vrEyeMatrix[12]) / separation;
+		float eyeScaleR = 1.f / eyeScale;
+		MatrixLoadScale(matrix, eyeScaleR, eyeScaleR, eyeScaleR);
+		MatrixMultiply(matrix, vrEyeMatrix);
+		MatrixMultiply(matrix, hmdHeadMatrix);
+		MatrixScale(matrix, eyeScale, eyeScale, eyeScale);
+	}
+	else
+	{
+		memcpy(matrix, hmdHeadMatrix, sizeof(*matrix)*12);
+		matrix[12] = matrix[13] = matrix[14] = 0;
+		matrix[15] = 1;
+	}
+}
+
+static void VRUpdate()
+{
+	if (!g_vrEnabled)
+	{
+		return;
+	}
+
+	vr::VREvent_t e;
+	while( hmd->PollNextEvent( &e, sizeof( e ) ) )
+	{
+		switch( e.eventType )
+		{
+		case vr::VREvent_TrackedDeviceActivated:
+			{
+				Com_Printf( "Device %u attached\n", e.trackedDeviceIndex);
+			}
+			break;
+		case vr::VREvent_TrackedDeviceDeactivated:
+			{
+				Com_Printf( "Device %u detached\n", e.trackedDeviceIndex);
+			}
+			break;
+		case vr::VREvent_TrackedDeviceUpdated:
+			{
+				//Com_Printf( "Device %u updated\n", e.trackedDeviceIndex);
+			}
+			break;
+		}
+	}
+
+	vr::TrackedDevicePose_t m_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+	vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+
+	if (m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
+	{
+		vr::HmdMatrix34_t &mat = m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking;
+		hmdHeadMatrix[0] = mat.m[0][0];
+		hmdHeadMatrix[1] = mat.m[1][0];
+		hmdHeadMatrix[2] = mat.m[2][0];
+		hmdHeadMatrix[3] = 0;
+		hmdHeadMatrix[4] = mat.m[0][1];
+		hmdHeadMatrix[5] = mat.m[1][1];
+		hmdHeadMatrix[6] = mat.m[2][1];
+		hmdHeadMatrix[7] = 0;
+		hmdHeadMatrix[8] = mat.m[0][2];
+		hmdHeadMatrix[9] = mat.m[1][2];
+		hmdHeadMatrix[10] = mat.m[2][2];
+		hmdHeadMatrix[11] = 0;
+		hmdHeadMatrix[12] = mat.m[0][3];
+		hmdHeadMatrix[13] = mat.m[1][3];
+		hmdHeadMatrix[14] = mat.m[2][3];
+		hmdHeadMatrix[15] = 1;
+		MatrixSimpleInverse(hmdHeadMatrix);
+	}
+	else
+	{
+		memset(hmdHeadMatrix, 0, sizeof(hmdHeadMatrix));
+		hmdHeadMatrix[0] = 1;
+		hmdHeadMatrix[5] = 1;
+		hmdHeadMatrix[10] = 1;
+		hmdHeadMatrix[15] = 1;
+	}
+
+	VRCreateProjectionMatrix(vrUIProjectionLeftMatrix, true, 0.1f, 256);
+	VRCreateProjectionMatrix(vrUIProjectionRightMatrix, false, 0.1f, 256);
+
+	VRCreateViewMatrix(vrFarViewMatrix,true,0);
+	VRCreateViewMatrix(vrViewLeftMatrix,true,r_stereoSeparation->value);
+	VRCreateViewMatrix(vrViewRightMatrix,false,r_stereoSeparation->value);
+	VRCreateViewMatrix(vrUIViewLeftMatrix,true,3.2f);
+	VRCreateViewMatrix(vrUIViewRightMatrix,false,3.2f);
+}
+
+#if 0
+bool viewportReset;
+int viewportTarget;
+int viewportCount;
+float viewportOldX;
+float viewportOldY;
+float viewportOldWidth;
+float viewportOldHeight;
+#endif
+void GL_Viewport( int x, int y, int width, int height ) {
+	if (g_vrEnabled)
+	{
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight);
+
+#if 0
+		viewportCount++;
+		if (!viewportReset && viewportCount != viewportTarget &&
+			viewportOldX == x &&
+			viewportOldY == y &&
+			viewportOldWidth == width &&
+			viewportOldHeight == height)
+		{
+			return;
+		}
+		viewportReset = false;
+		viewportOldX = x;
+		viewportOldY = y;
+		viewportOldWidth = width;
+		viewportOldHeight = height;
+#endif
+
+		float * projectionMatrix;
+		float * viewMatrix;
+		if (backEnd.stereoLeft)
+		{
+			projectionMatrix = vrUIProjectionLeftMatrix;
+			viewMatrix = vrUIViewLeftMatrix;
+		}
+		else
+		{
+			projectionMatrix = vrUIProjectionRightMatrix;
+			viewMatrix = vrUIViewRightMatrix;
+		}
+
+		qglMatrixMode(GL_PROJECTION);
+		qglPushMatrix();
+		qglLoadMatrixf(projectionMatrix);
+
+		qglMatrixMode(GL_MODELVIEW);
+		qglPushMatrix();
+		qglLoadMatrixf(viewMatrix);
+
+		static float UI_scale = 0.1f;
+		static float UI_z = -381.36f;
+		qglScalef(UI_scale, UI_scale, UI_scale); // scale it down
+		qglTranslatef(-320.f, -240.f, UI_z); // center X/Y, offset z
+
+#if 1
+		GL_State( GLS_DEPTHTEST_DISABLE );
+		qglEnable(GL_STENCIL_TEST);
+		qglDisable( GL_DEPTH_TEST );
+		qglDisable( GL_CULL_FACE );
+		qglDisable( GL_CLIP_PLANE0 );
+		qglStencilFunc(GL_ALWAYS, 1, 0xFF);
+		qglStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		qglStencilMask(0xFF);
+		qglColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		qglDepthMask(GL_FALSE);
+
+		// draw viewport to stencil
+		qglClearStencil( 0U );
+		qglClear(GL_STENCIL_BUFFER_BIT);
+#else
+		GL_State( GLS_ALPHA );
+		qglDisable( GL_DEPTH_TEST );
+		qglDisable( GL_TEXTURE_2D );
+		qglDisable( GL_CULL_FACE );
+		qglDisable( GL_CLIP_PLANE0 );
+		qglColor4f(1,1,0,0.5);
+#endif
+		qglScalef(640.f/(float)glConfig.vidWidth, 480.f/(float)glConfig.vidHeight, 1);
+		qglBegin(GL_TRIANGLE_FAN);
+		qglVertex2f(x, y+height);
+		qglVertex2f(x+width, y+height);
+		qglVertex2f(x+width, y);
+		qglVertex2f(x, y);
+		qglEnd();
+
+#if 1
+		qglStencilFunc(GL_EQUAL, 1, 0xFF);
+		qglStencilMask(0x00);
+		qglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		qglDepthMask(GL_TRUE);
+#else
+		qglEnable( GL_TEXTURE_2D );
+#endif
+
+		qglPopMatrix();
+		qglMatrixMode(GL_PROJECTION);
+		qglPopMatrix();
+		qglMatrixMode(GL_MODELVIEW);
+	}
+	else
+	{
+		// set the window clipping
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight);
+		qglScissor( x, y, width, height );
+	}
+}
+
 extern GLuint  g_fbo[2];
-extern GLuint  g_depthBuffer[2];
 extern GLuint  g_colorBuffer[2];
 
 void GL_DrawBuffer( int buffer ) {
+#if 0
+	viewportReset = true;
+	viewportCount = 0;
+#endif
 	if (glConfig.stereoEnabled == 2)
 	{
 		qglDrawBuffer(GL_BACK);
@@ -408,11 +866,13 @@ void GL_DrawBuffer( int buffer ) {
 		{
 			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[0]);
 			backEnd.stereoLeft = qtrue;
+			backEnd.projection2D = qfalse;
 		}
 		else if (buffer == GL_BACK_RIGHT)
 		{
 			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[1]);
 			backEnd.stereoLeft = qfalse;
+			backEnd.projection2D = qfalse;
 		}
 		else
 		{
@@ -431,10 +891,12 @@ void GL_Present( void )
 	{
 		GLint viewport[4];
 		qglGetIntegerv(GL_VIEWPORT, viewport);
-		qglViewport(0,0,glConfig.vidWidth,glConfig.vidHeight);
 
 		qglBindFramebuffer(GL_FRAMEBUFFER, 0);
 		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+
+		qglDisable(GL_STENCIL_TEST);
+		qglDisable(GL_SCISSOR_TEST);
 
 		qglDisable (GL_CLIP_PLANE0);
 		GL_Cull( CT_TWO_SIDED );
@@ -443,7 +905,7 @@ void GL_Present( void )
 		qglMatrixMode(GL_PROJECTION);
 		qglPushMatrix();
 		qglLoadIdentity();
-		qglOrtho(0, glConfig.vidWidth, glConfig.vidHeight, 0, -1, 1);
+		qglOrtho(0, 1, 1, 0, -1, 1);
 		qglMatrixMode(GL_MODELVIEW);
 		qglPushMatrix();
 		qglLoadIdentity();
@@ -453,6 +915,20 @@ void GL_Present( void )
 		GLint texture;
 		qglGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
 
+		if (g_OVRCompositor)
+		{
+			vr::Texture_t leftEyeTexture = {(void*)g_colorBuffer[0], vr::API_OpenGL, vr::ColorSpace_Gamma };
+			vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
+			vr::Texture_t rightEyeTexture = {(void*)g_colorBuffer[1], vr::API_OpenGL, vr::ColorSpace_Gamma };
+			vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture );
+			vr::VRCompositor()->PostPresentHandoff();
+		}
+
+		if (g_vrEnabled)
+		{
+			qglViewport( 0, 0, g_vidWidth, g_vidHeight );
+		}
+
 		// left
 		qglBindTexture( GL_TEXTURE_2D, g_colorBuffer[0] );
 		qglBegin(GL_QUADS);
@@ -461,13 +937,13 @@ void GL_Present( void )
 			qglVertex2f( 0, 0 );
 
 			qglTexCoord2f( 0, 0 );
-			qglVertex2f( 0, glConfig.vidHeight );
+			qglVertex2f( 0, 1 );
 
 			qglTexCoord2f( 1.f, 0 );
-			qglVertex2f( glConfig.vidWidth/2, glConfig.vidHeight );
+			qglVertex2f( 0.5f, 1 );
 
 			qglTexCoord2f( 1.f, 1.f );
-			qglVertex2f( glConfig.vidWidth/2, 0 );
+			qglVertex2f( 0.5f, 0 );
 		qglEnd();
 
 		// right
@@ -475,16 +951,16 @@ void GL_Present( void )
 		qglBegin(GL_QUADS);
 			qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 			qglTexCoord2f( 0, 1.f );
-			qglVertex2f( glConfig.vidWidth/2, 0 );
+			qglVertex2f( 0.5f, 0 );
 
 			qglTexCoord2f( 0, 0 );
-			qglVertex2f( glConfig.vidWidth/2, glConfig.vidHeight );
+			qglVertex2f( 0.5f, 1 );
 
 			qglTexCoord2f( 1.f, 0 );
-			qglVertex2f( glConfig.vidWidth, glConfig.vidHeight );
+			qglVertex2f( 1, 1 );
 
 			qglTexCoord2f( 1.f, 1.f );
-			qglVertex2f( glConfig.vidWidth, 0 );
+			qglVertex2f( 1, 0 );
 		qglEnd();
 
 		qglBindTexture( GL_TEXTURE_2D, texture );
@@ -496,7 +972,13 @@ void GL_Present( void )
 
 		qglViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
 	}
+
 	ri.WIN_Present(&window);
+
+	if (g_OVRCompositor)
+	{
+		VRUpdate();
+	}
 }
 
 
@@ -524,6 +1006,64 @@ static void RB_Hyperspace( void ) {
 
 void SetViewportAndScissor( void ) {
 	qglMatrixMode(GL_PROJECTION);
+	if (g_vrEnabled)
+	{
+		GL_Viewport(backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight);
+
+		VRCreateProjectionMatrix(vrProjectionMatrix, backEnd.stereoLeft == qtrue, r_znear->value, backEnd.viewParms.zFar);
+		qglMatrixMode(GL_PROJECTION);
+		qglLoadMatrixf( vrProjectionMatrix );
+
+		float * viewMatrix;
+		if (backEnd.refdef.rdflags & RDF_STEREO_FAR)
+		{
+			viewMatrix = vrFarViewMatrix;
+		}
+		else// if (backEnd.refdef.rdflags & RDF_STEREO)
+		{
+			if (backEnd.refdef.rdflags & RDF_UI)
+			{
+				if (backEnd.stereoLeft)
+				{
+					viewMatrix = vrUIViewLeftMatrix;
+				}
+				else
+				{
+					viewMatrix = vrUIViewRightMatrix;
+				}
+			}
+			else
+			{
+				if (backEnd.stereoLeft)
+				{
+					viewMatrix = vrViewLeftMatrix;
+				}
+				else
+				{
+					viewMatrix = vrViewRightMatrix;
+				}
+			}
+		}
+		qglMultMatrixf(viewMatrix);
+
+		// zoom scale
+		if (!(backEnd.refdef.rdflags & RDF_UI))
+		{
+			float defaultTanX = tanf((float)(80*M_PI/360));
+			float tanX = tanf(backEnd.refdef.fov_x * M_PI/360.f);
+			float scale = defaultTanX / tanX;
+			qglScalef(scale, scale, 1);
+		}
+
+		qglMatrixMode(GL_MODELVIEW);
+		qglLoadIdentity();
+
+		GL_StateOverride(0,0);
+
+		return;
+	}
+	
 	if (glConfig.stereoEnabled)
 	{
 		qglLoadIdentity();
@@ -573,19 +1113,11 @@ void SetViewportAndScissor( void ) {
 		qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
 	}
 	qglMatrixMode(GL_MODELVIEW);
+	qglLoadIdentity();
 
 	// set the window clipping
-	if (backEnd.refdef.rdflags & RDF_UI)
-	{
-		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	}
-	else
-	{
-		qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
-	}
-	qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	GL_Viewport(backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
+		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight);
 }
 
 /*
@@ -1136,17 +1668,46 @@ void	RB_SetGL2D (void) {
 	backEnd.projection2D = qtrue;
 
 	// set 2D virtual screen size
-	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-	qglMatrixMode(GL_PROJECTION);
-    qglLoadIdentity ();
-	qglOrtho (0, 640, 480, 0, 0, 1);
-	qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity ();
+	if (g_vrEnabled)
+	{
+		float * projectionMatrix;
+		float * viewMatrix;
+		if (backEnd.stereoLeft)
+		{
+			projectionMatrix = vrUIProjectionLeftMatrix;
+			viewMatrix = vrUIViewLeftMatrix;
+		}
+		else
+		{
+			projectionMatrix = vrUIProjectionRightMatrix;
+			viewMatrix = vrUIViewRightMatrix;
+		}
 
-	GL_State( GLS_DEPTHTEST_DISABLE |
-			  GLS_SRCBLEND_SRC_ALPHA |
-			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+		qglMatrixMode(GL_PROJECTION);
+		qglLoadMatrixf(projectionMatrix);
+
+		qglMatrixMode(GL_MODELVIEW);
+		qglLoadMatrixf(viewMatrix);
+
+		static float UI_scale = 0.1f;
+		static float UI_z = -381.36f;
+		qglScalef(UI_scale, UI_scale, UI_scale); // scale it down
+		qglTranslatef(-320.f, 240.f, UI_z); // center X/Y, offset z
+		qglScalef(1.f, -1.f, 1.f); // flip Y axis
+	}
+	else
+	{
+		qglMatrixMode(GL_PROJECTION);
+		qglLoadIdentity ();
+		qglOrtho (0, 640, 480, 0, 0, 1);
+		qglMatrixMode(GL_MODELVIEW);
+		qglLoadIdentity ();
+	}
+
+	GL_Viewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+
+	GL_StateOverride( GLS_DEPTHTEST_DISABLE, GLS_DEPTHTEST_DISABLE);
+	GL_State( GLS_ALPHA );
 
 	qglDisable( GL_CULL_FACE );
 	qglDisable( GL_CLIP_PLANE0 );
@@ -1563,7 +2124,8 @@ const void	*RB_DrawSurfs( const void *data ) {
 		const int oldViewHeight = backEnd.viewParms.viewportHeight;
 		backEnd.viewParms.viewportWidth = r_DynamicGlowWidth->integer;
 		backEnd.viewParms.viewportHeight = r_DynamicGlowHeight->integer;
-		SetViewportAndScissor();
+		//SetViewportAndScissor();
+		qglViewport(0, 0, r_DynamicGlowWidth->integer, r_DynamicGlowHeight->integer);
 
 		// Blur the scene.
 		RB_BlurGlowTexture();
@@ -1662,6 +2224,15 @@ const void	*RB_DrawBuffer( const void *data ) {
 		}
 		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		backEnd.needPresent = qtrue;
+	}
+	else
+	{
+		qglDepthMask( GL_TRUE );
+		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+		if ( !GL_IsStateSet( GLS_DEPTHMASK_TRUE, GLS_DEPTHMASK_TRUE ) )
+		{
+			qglDepthMask( GL_FALSE );
+		}
 	}
 
 	return (const void *)(cmd + 1);
@@ -1939,6 +2510,7 @@ extern bool g_bTextureRectangleHack;
 
 static inline void RB_BlurGlowTexture()
 {
+	qglDisable( GL_STENCIL_TEST );
 	qglDisable (GL_CLIP_PLANE0);
 	GL_Cull( CT_TWO_SIDED );
 
@@ -2111,6 +2683,7 @@ static inline void RB_BlurGlowTexture()
 // Draw the glow blur over the screen additively.
 static inline void RB_DrawGlowOverlay()
 {
+	qglEnable( GL_STENCIL_TEST );
 	qglDisable (GL_CLIP_PLANE0);
 	GL_Cull( CT_TWO_SIDED );
 

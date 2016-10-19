@@ -7228,10 +7228,7 @@ void Item_Model_Paint(itemDef_t *item)
 
 	// recompute origin by projecting origin to viewspace
 	// and placing in a virtual 3d ui space
-	float displayWidth = DC->getCVarValue("r_stereoDisplayWidth");
-	float displayDistance = DC->getCVarValue("r_stereoDisplayDistance");
-	float scalex = displayWidth *0.5f / displayDistance;
-	float UI_z = -320.f / scalex;
+	float UI_z = -381.36f;
 	origin[1] = -UI_scale * (w * (0.5f - 0.5f * origin[1] / (origin[0] * tanx)) + x - 320.f);
 	origin[2] = -UI_scale * (h * (0.5f - 0.5f * origin[2] / (origin[0] * tany)) + y - 240.f);
 	origin[0] = -(UI_z - maxs[2]) * UI_scale;
