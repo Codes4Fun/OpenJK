@@ -162,9 +162,15 @@ void CIN_CloseAllVideos(void) {
 static int CIN_HandleForVideo(void) {
 	int		i;
 
+	// try to avoid using the same handle twice to
+	// keep the previous movies frame around longer
+	static int handleOffset = 0;
+	handleOffset = 1 - handleOffset;
+
 	for ( i = 0 ; i < MAX_VIDEO_HANDLES ; i++ ) {
-		if ( cinTable[i].fileName[0] == 0 ) {
-			return i;
+		int handle = (i + handleOffset) % MAX_VIDEO_HANDLES;
+		if ( cinTable[handle].fileName[0] == 0 ) {
+			return handle;
 		}
 	}
 	Com_Error( ERR_DROP, "CIN_HandleForVideo: none free" );
