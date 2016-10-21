@@ -50,7 +50,7 @@ R_InitNextFrame
 */
 void R_InitNextFrame( void ) {
 
-	backEndData->commands.used = 0;
+	backEndData->commands[backEndData->currentCommands].used = 0;
 
 	r_firstSceneDrawSurf = 0;
 

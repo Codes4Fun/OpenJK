@@ -629,9 +629,6 @@ Ghoul2 Insert End
 	// only set the name after the model has been successfully loaded
 	Q_strncpyz( mod->name, name, sizeof( mod->name ) );
 
-	// make sure the render thread is stopped
-	R_IssuePendingRenderCommands(); //
-
 	int iLODStart = 0;
 	if (strstr (name, ".md3")) {
 		iLODStart = MD3_MAX_LODS-1;	//this loads the md3s in reverse so they can be biased

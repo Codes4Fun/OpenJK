@@ -1267,11 +1267,18 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 /*
 ** GL wrapper/helper functions
 */
+#define QGL_BACK 0
+#define QGL_OFFSCREEN 1
+#define QGL_BACK_LEFT 2
+#define QGL_BACK_RIGHT 3
+#define QGL_OFFSCREEN_LEFT 4
+#define QGL_OFFSCREEN_RIGHT 5
 void	GL_Bind( image_t *image );
 void	GL_SetDefaultState (void);
 void	GL_SelectTexture( int unit );
 void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
+void	GL_StateOverride( uint32_t stateMask, uint32_t stateBits );
 void	GL_State( uint32_t stateVector );
 void	GL_DrawBuffer( int buffer );
 void	GL_Present( void );
@@ -1696,7 +1703,7 @@ RENDERER BACK END FUNCTIONS
 =============================================================
 */
 
-void RB_ExecuteRenderCommands( const void *data );
+void RB_ExecuteRenderCommands( const void *data, const void *captured );
 
 /*
 =============================================================
@@ -1825,13 +1832,20 @@ typedef struct {
 	trRefEntity_t	entities[MAX_REFENTITIES];
 	srfPoly_t	polys[MAX_POLYS];
 	polyVert_t	polyVerts[MAX_POLYVERTS];
-	renderCommandList_t	commands;
+	int currentCommands;
+	renderCommandList_t	commands[2];
+	qboolean capture;
+	qboolean hasCapture;
+	byte captured[MAX_RENDER_COMMANDS];
 } backEndData_t;
 
 extern	backEndData_t	*backEndData;
 
 void *R_GetCommandBuffer( int bytes );
-void RB_ExecuteRenderCommands( const void *data );
+void R_CommandCapture( void );
+void R_CommandSetCapture( void );
+void R_CommandClearCapture( void );
+void RB_ExecuteRenderCommands( const void *data, int capture );
 
 void R_IssuePendingRenderCommands( void );
 

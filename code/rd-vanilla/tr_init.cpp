@@ -266,8 +266,8 @@ QGLDEFINE(glUniform2fv);
 bool g_bTextureRectangleHack = false;
 
 GLuint  g_depthBuffer;
-GLuint  g_fbo[2];
-GLuint  g_colorBuffer[2];
+GLuint  g_fbo[3];
+GLuint  g_colorBuffer[3];
 
 void RE_SetLightStyle(int style, int color);
 
@@ -775,8 +775,8 @@ static void InitFramebuffers( void )
 	}
 
 	qglGenRenderbuffers(1, &g_depthBuffer);
-	qglGenTextures(2, g_colorBuffer);
-	qglGenFramebuffers(2, g_fbo);
+	qglGenTextures(3, g_colorBuffer);
+	qglGenFramebuffers(3, g_fbo);
 
 	// shared depth+stencil buffer
 	qglBindRenderbuffer(GL_RENDERBUFFER, g_depthBuffer);
@@ -810,6 +810,24 @@ static void InitFramebuffers( void )
 
 	qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[1]);
 	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_colorBuffer[1], 0);
+	qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, g_depthBuffer);
+
+	status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		Com_Printf ("...framebuffer initialization failed\n" );
+	}
+
+	// offscreen
+	qglBindTexture(GL_TEXTURE_2D, g_colorBuffer[2]);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+
+	qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[2]);
+	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_colorBuffer[2], 0);
 	qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, g_depthBuffer);
 
 	status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);

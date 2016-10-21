@@ -349,8 +349,6 @@ typedef struct
 {
 	int			iWidth;
 	int			iHeight;
-	int			iUploadWidth;
-	int			iUploadHeight;
 	int			iScratchPadNumber;
 	image_t		*pImage;	// old image screen
 	image_t		*pDissolve;	// fuzzy thing
@@ -388,7 +386,17 @@ static void RE_Blit(float fX0, float fY0, float fX1, float fY1, float fX2, float
 					image_t *pImage, int iGLState
 					)
 {
-	GL_Bind( pImage );
+	if (pImage == Dissolve.pImage)
+	{
+		GL_Bind( Dissolve.pImage );
+		extern GLuint g_colorBuffer[3];
+		qglBindTexture (GL_TEXTURE_2D, g_colorBuffer[2]);
+	}
+	else
+	{
+		GL_Bind( pImage );
+	}
+
 	GL_State(iGLState);
 	GL_Cull( CT_TWO_SIDED ) ;
 
@@ -425,14 +433,13 @@ static void RE_Blit(float fX0, float fY0, float fX1, float fY1, float fX2, float
 	backEnd.needPresent = qtrue;
 }
 
-static void RE_KillDissolve(void)
+static void RE_KillDissolve(qboolean reset)
 {
 	Dissolve.iStartTime = 0;
 
-	if (Dissolve.pImage)
+	if (!reset)
 	{
-		R_Images_DeleteImage(	Dissolve.pImage );
-								Dissolve.pImage = NULL;
+		R_CommandClearCapture();
 	}
 }
 
@@ -467,7 +474,7 @@ qboolean RE_ProcessDissolve(void)
 
 	if (iDissolvePercentage > 100)
 	{
-		RE_KillDissolve();
+		RE_KillDissolve(qfalse);
 		return qfalse;
 	}
 
@@ -500,6 +507,11 @@ const void *RB_ProcessDissolve(const void *data)
 	qglClearDepth(1.0f);
 	qglClear( GL_DEPTH_BUFFER_BIT );
 
+	qglStencilFunc(GL_ALWAYS, 1, 0xFF);
+	qglStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	qglStencilMask(0xFF);
+
+	qglClear(GL_STENCIL_BUFFER_BIT);
 
 	float fXScaleFactor = (float)SCREEN_WIDTH / (float)Dissolve.iWidth;
 	float fYScaleFactor = (float)SCREEN_HEIGHT/ (float)Dissolve.iHeight;
@@ -724,14 +736,23 @@ const void *RB_ProcessDissolve(const void *data)
 	//
 	if (iDissolvePercentage <= 100)
 	{
+		qglMatrixMode(GL_PROJECTION);
+		qglLoadIdentity ();
+		qglOrtho (0, 640, 480, 0, 0, 1);
+		qglMatrixMode(GL_MODELVIEW);
+		qglLoadIdentity ();
+
+		qglStencilFunc(GL_EQUAL, 1, 0xFF);
+		qglStencilMask(0x00);
+
 		// still dissolving, so now (finally), blit old image over top...
 		//
 		x0 = 0.0f;
-		y0 = 0.0f;
-		x1 = fXScaleFactor * Dissolve.pImage->width;
+		y0 = 480.0f;
+		x1 = 640.f;
 		y1 = y0;
 		x2 = x1;
-		y2 = fYScaleFactor * Dissolve.pImage->height;
+		y2 = 0.0f;
 		x3 = x0;
 		y3 = y2;
 
@@ -745,8 +766,6 @@ const void *RB_ProcessDissolve(const void *data)
 //
 qboolean RE_InitDissolve(qboolean bForceCircularExtroWipe)
 {
-	R_IssuePendingRenderCommands();
-
 //	ri.Printf( PRINT_ALL, "RE_InitDissolve()\n");
 	qboolean bReturn = qfalse;
 
@@ -755,123 +774,17 @@ qboolean RE_InitDissolve(qboolean bForceCircularExtroWipe)
 		tr.registered == qtrue		// ... stops it crashing during first cinematic before the menus... :-)
 		)
 	{
-		RE_KillDissolve();	// kill any that are already running
+		RE_KillDissolve(qtrue);	// kill any that are already running
 
-		int iPow2VidWidth	= PowerOf2( glConfig.vidWidth );
-		int iPow2VidHeight	= PowerOf2( glConfig.vidHeight);
-
-		int iBufferBytes	= iPow2VidWidth * iPow2VidHeight * 4;
-		byte *pBuffer = (byte *) R_Malloc( iBufferBytes, TAG_TEMP_WORKSPACE, qfalse);
-		if (pBuffer)
 		{
-			// read current screen image...  (GL_RGBA should work even on 3DFX in that the RGB parts will be valid at least)
-			//
-			qglReadPixels (0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGBA, GL_UNSIGNED_BYTE, pBuffer );
-			//
-			// now expand the pic over the top of itself so that it has a stride value of {PowerOf2(glConfig.vidWidth)}
-			//	(for GL power-of-2 rules)
-			//
-			byte *pbSrc = &pBuffer[	glConfig.vidWidth	* glConfig.vidHeight * 4];
-			byte *pbDst = &pBuffer[ iPow2VidWidth		* glConfig.vidHeight * 4];
-			//
-			// ( clear to end, since we've got pbDst nicely setup here)
-			//
-			int iClearBytes = &pBuffer[iBufferBytes] - pbDst;
-			memset(pbDst, 0, iClearBytes);
-			//
-			// work out copy/stride vals...
-			//
-				iClearBytes = ( iPow2VidWidth - glConfig.vidWidth ) * 4;
-			int iCopyBytes	= glConfig.vidWidth * 4;
-			//
-			// do it...
-			//
-			for (int y = 0; y < glConfig.vidHeight; y++)
-			{
-				pbDst -= iClearBytes;
-				memset(pbDst,0,iClearBytes);
-				pbDst -= iCopyBytes;
-				pbSrc -= iCopyBytes;
-				memmove(pbDst, pbSrc, iCopyBytes);
-			}
-			//
-			// ok, now we've got the screen image in the top left of the power-of-2 texture square,
-			//	but of course the damn thing's upside down (thanks, GL), so invert it, but only within
-			//	the picture pixels, NOT the upload texture as a whole...
-			//
-			byte *pbSwapLineBuffer = (byte *)R_Malloc( iCopyBytes, TAG_TEMP_WORKSPACE, qfalse);
-			pbSrc = &pBuffer[0];
-			pbDst = &pBuffer[(glConfig.vidHeight-1) * iPow2VidWidth * 4];
-			for (int y = 0; y < glConfig.vidHeight/2; y++)
-			{
-				memcpy(pbSwapLineBuffer, pbDst, iCopyBytes);
-				memcpy(pbDst, pbSrc, iCopyBytes);
-				memcpy(pbSrc, pbSwapLineBuffer, iCopyBytes);
-				pbDst -= iPow2VidWidth*4;
-				pbSrc += iPow2VidWidth*4;
-			}
-			R_Free(pbSwapLineBuffer);
-
-			//
-			// Now, in case of busted drivers, 3DFX cards, etc etc we stomp the alphas to 255...
-			//
-			byte *pPix = pBuffer;
-			for (int i=0; i<iBufferBytes/4; i++, pPix += 4)
-			{
-				pPix[3] = 255;
-			}
+			R_CommandCapture();
 
 			// work out what res we're capable of storing/xfading this "screen sprite"...
 			//
 			Dissolve.iWidth			= glConfig.vidWidth;
 			Dissolve.iHeight		= glConfig.vidHeight;
-			Dissolve.iUploadWidth	= iPow2VidWidth;
-			Dissolve.iUploadHeight	= iPow2VidHeight;
-			int	iTexSize			= glConfig.maxTextureSize;
 
-			if ( glConfig.maxTextureSize < 256 )	// jic the driver sucks
-			{
-				iTexSize = 256;
-			}
-
-			if (Dissolve.iUploadWidth > iTexSize) {
-				Dissolve.iUploadWidth = iTexSize;
-			}
-
-			if (Dissolve.iUploadHeight > iTexSize) {
-				Dissolve.iUploadHeight = iTexSize;
-			}
-
-			// alloc resample buffer...  (note slight optimisation to avoid spurious alloc)
-			//
-			byte *pbReSampleBuffer =	(	iPow2VidWidth == Dissolve.iUploadWidth &&
-											iPow2VidHeight == Dissolve.iUploadHeight
-										)?
-										NULL :
-										(byte*) R_Malloc( iPow2VidWidth * iPow2VidHeight * 4, TAG_TEMP_WORKSPACE, qfalse);
-
-			// re-sample screen...
-			//
-			byte *pbScreenSprite = RE_ReSample(	pBuffer,				// byte *pbLoadedPic
-												iPow2VidWidth,			// int iLoadedWidth
-												iPow2VidHeight,			// int iLoadedHeight
-												//
-												pbReSampleBuffer,		// byte *pbReSampleBuffer
-												&Dissolve.iUploadWidth,	// int *piWidth
-												&Dissolve.iUploadHeight	// int *piHeight
-												);
-
-			Dissolve.pImage = R_CreateImage("*DissolveImage",		// const char *name
-											pbScreenSprite,			// const byte *pic
-											Dissolve.iUploadWidth,	// int width
-											Dissolve.iUploadHeight,	// int height
-											GL_RGBA,
-											qfalse,					// qboolean mipmap
-											qfalse,					// qboolean allowPicmip
-											qfalse,					// qboolean allowTC
-											GL_CLAMP				// int glWrapClampMode
-											);
-
+			Dissolve.pImage = tr.screenImage;
 
 			static byte bBlack[8*8*4]={0};
 			for (int j=0; j<8*8*4; j+=4)	// itu?
@@ -887,12 +800,6 @@ qboolean RE_InitDissolve(qboolean bForceCircularExtroWipe)
 											qfalse,				// qboolean allowTC
 											GL_CLAMP			// int glWrapClampMode
 											);
-
-			if (pbReSampleBuffer)
-			{
-				R_Free(pbReSampleBuffer);
-			}
-			R_Free(pBuffer);
 
 			// pick dissolve type...
 			//
@@ -1001,7 +908,7 @@ qboolean RE_InitDissolve(qboolean bForceCircularExtroWipe)
 			}
 			else
 			{
-				RE_KillDissolve();
+				RE_KillDissolve(qfalse);
 			}
 		}
 	}

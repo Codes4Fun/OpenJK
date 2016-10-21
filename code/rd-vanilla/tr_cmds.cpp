@@ -86,6 +86,52 @@ void R_PerformanceCounters( void ) {
 
 /*
 ====================
+R_CommandCapture
+====================
+*/
+void R_CommandCapture( void )
+{
+	renderCommandList_t	*cmdList;
+
+	/*if (backEndData->commands[backEndData->currentCommands].used > 0)
+	{
+		// we have commands pending in the queue.
+		backEndData->capture = qtrue;
+		return;
+	}*/
+
+	cmdList = &backEndData->commands[1 - backEndData->currentCommands];
+
+	backEndData->hasCapture = qtrue;
+	memcpy(backEndData->captured, cmdList->cmds, cmdList->used);
+}
+
+/*
+============
+R_CommandSetCapture
+
+tag these commands as needing to be captured.
+============
+*/
+void R_CommandSetCapture( void )
+{
+	backEndData->capture = qtrue;
+}
+
+/*
+============
+R_CommandClearCapture
+
+stop drawing captured commands offscreen
+============
+*/
+void R_CommandClearCapture( void )
+{
+	backEndData->hasCapture = qfalse;
+}
+
+/*
+====================
 R_IssueRenderCommands
 ====================
 */
@@ -95,14 +141,34 @@ int	c_blockedOnMain;
 void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 	renderCommandList_t	*cmdList;
 
-	cmdList = &backEndData->commands;
+	cmdList = &backEndData->commands[backEndData->currentCommands];
+
+	if (cmdList->used == 0)
+	{
+		return;
+	}
+
+	// should always be big enough for both a draw buffer and swap buffer
+	assert(cmdList->used >= sizeof(drawBufferCommand_t) + sizeof(swapBuffersCommand_t));
+	// first should always be a draw buffer
+	assert((*(const int *)cmdList->cmds) == RC_DRAW_BUFFER);
+	// last should always be a swap buffer
+	assert((*(const int *)(cmdList->cmds + cmdList->used - sizeof(swapBuffersCommand_t))) == RC_SWAP_BUFFERS);
+
+	// skip empty command list
+	if (cmdList->used == sizeof(drawBufferCommand_t) + sizeof(swapBuffersCommand_t))
+	{
+		cmdList->used = 0;
+		return;
+	}
+
+	// if assertion fails, we need to figure out why and change it.
+	assert(runPerformanceCounters);
 
 	// add an end-of-list command
 	byteAlias_t *ba = (byteAlias_t *)&cmdList->cmds[cmdList->used];
 	ba->ui = RC_END_OF_LIST;
-
-	// clear it out, in case this is a sync and not a buffer flip
-	cmdList->used = 0;
+	cmdList->used += sizeof(byteAlias_t);
 
 	// at this point, the back end thread is idle, so it is ok
 	// to look at it's performance counters
@@ -110,10 +176,27 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 		R_PerformanceCounters();
 	}
 
+	byte *captured = NULL;
+	if (backEndData->hasCapture)
+	{
+		captured = backEndData->captured;
+	}
+
 	// actually start the commands going
 	if ( !r_skipBackEnd->integer ) {
 		// let it start on the new batch
-		RB_ExecuteRenderCommands( cmdList->cmds );
+		RB_ExecuteRenderCommands( cmdList->cmds, captured );
+	}
+
+	// swap command buffers
+	backEndData->currentCommands = 1 - backEndData->currentCommands;
+	// clear new command buffer
+	backEndData->commands[backEndData->currentCommands].used = 0;
+
+	if (backEndData->capture)
+	{
+		backEndData->capture = qfalse;
+		R_CommandCapture();
 	}
 }
 
@@ -142,7 +225,7 @@ make sure there is enough command space
 void *R_GetCommandBuffer( int bytes ) {
 	renderCommandList_t	*cmdList;
 
-	cmdList = &backEndData->commands;
+	cmdList = &backEndData->commands[backEndData->currentCommands];
 	bytes = PAD(bytes, sizeof (void *));
 
 	assert(cmdList);

@@ -851,8 +851,8 @@ void GL_Viewport( int x, int y, int width, int height ) {
 	}
 }
 
-extern GLuint  g_fbo[2];
-extern GLuint  g_colorBuffer[2];
+extern GLuint  g_fbo[3];
+extern GLuint  g_colorBuffer[3];
 
 void GL_DrawBuffer( int buffer ) {
 #if 0
@@ -862,15 +862,27 @@ void GL_DrawBuffer( int buffer ) {
 	if (glConfig.stereoEnabled == 2)
 	{
 		qglDrawBuffer(GL_BACK);
-		if (buffer == GL_BACK_LEFT)
+		if (buffer == QGL_BACK_LEFT)
 		{
 			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[0]);
 			backEnd.stereoLeft = qtrue;
 			backEnd.projection2D = qfalse;
 		}
-		else if (buffer == GL_BACK_RIGHT)
+		else if (buffer == QGL_BACK_RIGHT)
 		{
 			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[1]);
+			backEnd.stereoLeft = qfalse;
+			backEnd.projection2D = qfalse;
+		}
+		else if (buffer == QGL_OFFSCREEN_LEFT)
+		{
+			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[2]);
+			backEnd.stereoLeft = qtrue;
+			backEnd.projection2D = qfalse;
+		}
+		else if (buffer == QGL_OFFSCREEN_RIGHT)
+		{
+			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[2]);
 			backEnd.stereoLeft = qfalse;
 			backEnd.projection2D = qfalse;
 		}
@@ -881,7 +893,15 @@ void GL_DrawBuffer( int buffer ) {
 	}
 	else
 	{
-		qglDrawBuffer(buffer);
+		qglDrawBuffer(GL_BACK);
+		if (buffer == QGL_OFFSCREEN)
+		{
+			qglBindFramebuffer(GL_FRAMEBUFFER, g_fbo[2]);
+		}
+		else
+		{
+			qglBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
 	}
 }
 
@@ -2424,7 +2444,7 @@ static void ExecuteRenderCommands( const void *data, int buffer ) {
 			data = RB_DrawBuffer( data );
 			break;
 		case RC_SWAP_BUFFERS:
-			if (buffer == GL_BACK || buffer == GL_BACK_RIGHT)
+			if (buffer == QGL_BACK || buffer == QGL_BACK_RIGHT)
 			{
 				data = RB_SwapBuffers( data );
 			}
@@ -2444,19 +2464,31 @@ static void ExecuteRenderCommands( const void *data, int buffer ) {
 
 }
 
-void RB_ExecuteRenderCommands( const void *data ) {
+void RB_ExecuteRenderCommands( const void *data, const void *captured ) {
 	int		t1, t2;
 
 	t1 = ri.Milliseconds ();
 
 	if (glConfig.stereoEnabled)
 	{
-		ExecuteRenderCommands(data, GL_BACK_LEFT);
-		ExecuteRenderCommands(data, GL_BACK_RIGHT);
+		if (captured)
+		{
+			ExecuteRenderCommands(captured, QGL_OFFSCREEN_LEFT);
+		}
+		ExecuteRenderCommands(data, QGL_BACK_LEFT);
+		if (captured)
+		{
+			ExecuteRenderCommands(captured, QGL_OFFSCREEN_RIGHT);
+		}
+		ExecuteRenderCommands(data, QGL_BACK_RIGHT);
 	}
 	else
 	{
-		ExecuteRenderCommands(data, GL_BACK);
+		if (captured)
+		{
+			ExecuteRenderCommands(captured, QGL_OFFSCREEN);
+		}
+		ExecuteRenderCommands(data, QGL_BACK);
 	}
 
 	// stop rendering
