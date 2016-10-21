@@ -503,7 +503,8 @@ void MatrixMultiply(float * matrix, const float * first)
 	matrix[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
 }
 
-void MatrixSimpleInverse(float * _m)
+// scale rotation translation inverse
+void MatrixSRTInverse(float * _m)
 {
 	float temp1, temp2, temp3;
 	float tx, ty, tz, tw;
@@ -534,6 +535,44 @@ void MatrixSimpleInverse(float * _m)
 	VectorScale(_m, sx, _m);
 	VectorScale(_m + 4, sy, _m + 4);
 	VectorScale(_m + 8, sz, _m + 8);
+
+	// inverse translation
+	tx = _m[12] * _m[0]
+	   + _m[13] * _m[4]
+	   + _m[14] * _m[8];
+	ty = _m[12] * _m[1]
+	   + _m[13] * _m[5]
+	   + _m[14] * _m[9];
+	tz = _m[12] * _m[2]
+	   + _m[13] * _m[6]
+	   + _m[14] * _m[10];
+	tw = _m[12] * _m[3]
+	   + _m[13] * _m[7]
+	   + _m[14] * _m[11]
+	   + _m[15];
+
+	_m[12] = -tx;
+	_m[13] = -ty;
+	_m[14] = -tz;
+	_m[15] = tw;
+}
+
+// rotation translation inverse
+void MatrixRTInverse(float * _m)
+{
+	float temp1, temp2, temp3;
+	float tx, ty, tz, tw;
+
+	// inverse rotation
+	temp1 = _m[1];
+	temp2 = _m[2];
+	temp3 = _m[6];
+	_m[1] = _m[4];
+	_m[2] = _m[8];
+	_m[6] = _m[9];
+	_m[4] = temp1;
+	_m[8] = temp2;
+	_m[9] = temp3;
 
 	// inverse translation
 	tx = _m[12] * _m[0]
@@ -603,27 +642,26 @@ void MatrixSetProjectionNearFar(float *projectionMatrix, float zNear, float zFar
 
 extern bool g_vrEnabled;
 extern vr::IVRSystem * hmd;
-extern float hmdFovLeft[4];
-extern float hmdFovRight[4];
 extern float hmdEyeLeft[16];
 extern float hmdEyeRight[16];
 extern bool g_OVRCompositor;
-extern bool g_OVRCompositorDebug;
 extern int g_vidWidth;
 extern int g_vidHeight;
 extern float hmdProjectionLeft[16];
 extern float hmdProjectionRight[16];
+
 float hmdHeadMatrix[16];
 
 float vrUIProjectionLeftMatrix[16];
 float vrUIProjectionRightMatrix[16];
-float vrFarViewMatrix[16];
-float vrViewLeftMatrix[16];
-float vrViewRightMatrix[16];
 float vrUIViewLeftMatrix[16];
 float vrUIViewRightMatrix[16];
 
 float vrProjectionMatrix[16];
+float vrFarViewMatrix[16];
+float vrViewLeftMatrix[16];
+float vrViewRightMatrix[16];
+
 
 void VRCreateProjectionMatrix(float * matrix, bool leftEye, float zNear, float zFar)
 {
@@ -720,7 +758,7 @@ static void VRUpdate()
 		hmdHeadMatrix[13] = mat.m[1][3];
 		hmdHeadMatrix[14] = mat.m[2][3];
 		hmdHeadMatrix[15] = 1;
-		MatrixSimpleInverse(hmdHeadMatrix);
+		MatrixRTInverse(hmdHeadMatrix);
 	}
 	else
 	{
@@ -733,12 +771,12 @@ static void VRUpdate()
 
 	VRCreateProjectionMatrix(vrUIProjectionLeftMatrix, true, 0.1f, 512);
 	VRCreateProjectionMatrix(vrUIProjectionRightMatrix, false, 0.1f, 512);
+	VRCreateViewMatrix(vrUIViewLeftMatrix,true,3.2f);
+	VRCreateViewMatrix(vrUIViewRightMatrix,false,3.2f);
 
 	VRCreateViewMatrix(vrFarViewMatrix,true,0);
 	VRCreateViewMatrix(vrViewLeftMatrix,true,r_stereoSeparation->value);
 	VRCreateViewMatrix(vrViewRightMatrix,false,r_stereoSeparation->value);
-	VRCreateViewMatrix(vrUIViewLeftMatrix,true,3.2f);
-	VRCreateViewMatrix(vrUIViewRightMatrix,false,3.2f);
 }
 
 #if 0

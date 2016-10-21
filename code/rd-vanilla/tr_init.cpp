@@ -876,7 +876,7 @@ bool g_OVRCompositorDebug = true;
 int g_vidWidth;
 int g_vidHeight;
 
-void MatrixSimpleInverse(float * _m);
+void MatrixRTInverse(float * _m);
 
 static bool VRInitialize()
 {
@@ -933,11 +933,11 @@ static bool VRInitialize()
 	
 	mat = hmd->GetEyeToHeadTransform( vr::Eye_Left );
 	Convert4x3Matrix(&mat, hmdEyeLeft);
-	MatrixSimpleInverse(hmdEyeLeft);
+	MatrixRTInverse(hmdEyeLeft);
 
 	mat = hmd->GetEyeToHeadTransform( vr::Eye_Right );
 	Convert4x3Matrix(&mat, hmdEyeRight);
-	MatrixSimpleInverse(hmdEyeRight);
+	MatrixRTInverse(hmdEyeRight);
 
 	return true;
 }
