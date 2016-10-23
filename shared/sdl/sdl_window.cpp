@@ -886,3 +886,55 @@ void *WIN_GL_GetProcAddress( const char *proc )
 {
 	return SDL_GL_GetProcAddress( proc );
 }
+
+void WIN_GL_MakeCurrent( qboolean here )
+{
+	if (here)
+	{
+		SDL_GL_MakeCurrent( screen, opengl_context );
+	}
+	else
+	{
+		SDL_GL_MakeCurrent( NULL, NULL );
+	}
+}
+
+void *MT_CreateMutex( void )
+{
+	return SDL_CreateMutex();
+}
+
+void *MT_CreateCond( void )
+{
+	return SDL_CreateCond();
+}
+
+void *MT_CreateThread( int (*fn)(void*), const char *name, void *data )
+{
+	return SDL_CreateThread(fn, name, data);
+}
+
+int MT_LockMutex( void *mutex )
+{
+	return SDL_LockMutex((SDL_mutex*)mutex);
+}
+
+int MT_UnlockMutex( void *mutex )
+{
+	return SDL_UnlockMutex((SDL_mutex*)mutex);
+}
+
+int MT_CondWait( void *cond, void *mutex )
+{
+	return SDL_CondWait((SDL_cond*)cond, (SDL_mutex*)mutex);
+}
+
+int MT_CondWaitTimeout( void *cond, void *mutex, uint32_t ms)
+{
+	return SDL_CondWaitTimeout((SDL_cond*)cond, (SDL_mutex*)mutex, ms);
+}
+
+int MT_CondSignal( void *cond )
+{
+	return SDL_CondSignal((SDL_cond*)cond);
+}

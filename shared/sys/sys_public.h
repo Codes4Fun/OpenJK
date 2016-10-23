@@ -200,5 +200,15 @@ void		WIN_Present( window_t *window );
 void		WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] );
 void		WIN_Shutdown( void );
 void *		WIN_GL_GetProcAddress( const char *proc );
+void		WIN_GL_MakeCurrent( qboolean here );
 
 uint8_t ConvertUTF32ToExpectedCharset( uint32_t utf32 );
+
+void *MT_CreateMutex( void );
+void *MT_CreateCond( void );
+void *MT_CreateThread( int (*fn)(void*), const char *name, void *data );
+int MT_LockMutex( void *mutex );
+int MT_UnlockMutex( void *mutex );
+int MT_CondWait( void *cond, void *mutex );
+int MT_CondWaitTimeout( void *cond, void *mutex, uint32_t ms);
+int MT_CondSignal( void *cond );

@@ -56,9 +56,9 @@ static const float s_flipMatrix[16] = {
 
 
 /*
-** GL_Bind
+** GL_GetTexNum
 */
-void GL_Bind( image_t *image ) {
+int GL_GetTexNum( image_t *image ) { 
 	int texnum;
 
 	if ( !image ) {
@@ -71,6 +71,16 @@ void GL_Bind( image_t *image ) {
 	if ( r_nobind->integer && tr.dlightImage ) {		// performance evaluation option
 		texnum = tr.dlightImage->texnum;
 	}
+
+	return texnum;
+}
+
+
+/*
+** GL_Bind
+*/
+void GL_Bind( image_t *image ) {
+	int texnum = GL_GetTexNum(image);
 
 	if ( glState.currenttextures[glState.currenttmu] != texnum ) {
 		image->frameUsed = tr.frameCount;
@@ -2441,6 +2451,351 @@ const void	*RB_WorldEffects( const void *data )
 	}
 
 	return (const void *)(cmd + 1);
+}
+
+
+int g_imageCommandsCurrent;
+qglImageCmdList_t * g_imageCommands;
+
+void * g_imageUploadMutex;
+void * g_imageUploadCond;
+
+void R_ImageUploadInit()
+{
+	g_imageUploadMutex = ri.MT_CreateMutex();
+	g_imageUploadCond = ri.MT_CreateCond();
+	g_imageCommands = (qglImageCmdList_t*)malloc(sizeof(qglImageCmdList_t)*2);
+	g_imageCommands[0].used = 0;
+	g_imageCommands[1].used = 0;
+}
+
+void R_ImageUploadLock()
+{
+	if (ri.MT_LockMutex(g_imageUploadMutex) != 0)
+	{
+		assert(0);
+		*(int*)0 = 0; // force crash
+	}
+}
+
+void R_ImageUploadUnlock()
+{
+	ri.MT_UnlockMutex(g_imageUploadMutex);
+}
+
+static byte * R_ImageGetCommand(int size)
+{
+	assert(size + 4 <= MAX_IMAGE_COMMANDS);
+
+	qglImageCmdList_t * cmdList = &g_imageCommands[g_imageCommandsCurrent];
+	int end = cmdList->used + size;
+	while (end + 4 > MAX_IMAGE_COMMANDS)
+	{
+		// see if we can flush the previous
+		R_RenderThreadWake();
+		ri.MT_CondWait(g_imageUploadCond, g_imageUploadMutex);
+		cmdList = &g_imageCommands[g_imageCommandsCurrent];
+		end = cmdList->used + size;
+	}
+	byte * data = cmdList->cmds + cmdList->used;
+	cmdList->used = end;
+	return data;
+}
+
+void R_qglBindTexture(uint32_t target, uint32_t texture)
+{
+	if (!R_RenderThreadRunning())
+	{
+		qglBindTexture(target, texture);
+		return;
+	}
+	R_ImageUploadLock();
+	qglBindTextureCmd_t * cmd = (qglBindTextureCmd_t*)R_ImageGetCommand(sizeof(qglBindTextureCmd_t));
+	cmd->commandId = QGLC_BINDTEXTURE;
+	cmd->target = target;
+	cmd->texture = texture;
+	R_ImageUploadUnlock();
+}
+
+static qglBindTextureCmd_t lastBindTexture = { QGLC_BINDTEXTURE, GL_TEXTURE_2D, 0 };
+byte * R_qglBindTextureExecute(byte * data)
+{
+	qglBindTextureCmd_t * cmd = (qglBindTextureCmd_t*)data;
+	qglBindTexture(cmd->target, cmd->texture);
+	lastBindTexture.target = cmd->target;
+	lastBindTexture.texture = cmd->texture;
+	return data + sizeof(qglBindTextureCmd_t);
+}
+
+void R_qglTexImage2D( uint32_t target, int level,
+	int internalFormat, uint32_t width, uint32_t height,
+	int border, uint32_t format, uint32_t type, void * data)
+{
+	if (!R_RenderThreadRunning())
+	{
+		qglTexImage2D(target, level, internalFormat, width, height, border, format, type, data);
+		return;
+	}
+	R_ImageUploadLock();
+	int dataSize = width * height * 4;
+	qglTexImage2DCmd_t * cmd = (qglTexImage2DCmd_t*)R_ImageGetCommand(sizeof(qglTexImage2DCmd_t) + dataSize - 1);
+	cmd->commandId = QGLC_TEXIMAGE2D;
+	cmd->target = target;
+	cmd->level = level;
+	cmd->internalFormat = internalFormat;
+	cmd->width = width;
+	cmd->height = height;
+	cmd->border = border;
+	cmd->format = format;
+	cmd->type = type;
+	memcpy(cmd->data, data, dataSize);
+	R_ImageUploadUnlock();
+}
+
+byte * R_qglTexImage2DExecute(byte * data)
+{
+	qglTexImage2DCmd_t * cmd = (qglTexImage2DCmd_t*)data;
+	qglTexImage2D(cmd->target, cmd->level, cmd->internalFormat, cmd->width, cmd->height, cmd->border, cmd->format, cmd->type, cmd->data);
+	int size = sizeof(qglTexImage2DCmd_t) + cmd->width*cmd->height*4 - 1;
+	return data + size;
+}
+
+void R_qglTexParameterf( uint32_t target, uint32_t pname, float param)
+{
+	if (!R_RenderThreadRunning())
+	{
+		qglTexParameterf(target, pname, param);
+		return;
+	}
+	R_ImageUploadLock();
+	qglTexParameterfCmd_t * cmd = (qglTexParameterfCmd_t*)R_ImageGetCommand(sizeof(qglTexParameterfCmd_t));
+	cmd->commandId = QGLC_TEXPARAMETERF;
+	cmd->target = target;
+	cmd->pname = pname;
+	cmd->param = param;
+	R_ImageUploadUnlock();
+}
+
+byte * R_qglTexParameterfExecute(byte * data)
+{
+	qglTexParameterfCmd_t * cmd = (qglTexParameterfCmd_t*)data;
+	qglTexParameterf(cmd->target, cmd->pname, cmd->param);
+	return data + sizeof(qglTexParameterfCmd_t);
+}
+
+void R_qglTexParameteri( uint32_t target, uint32_t pname, int param)
+{
+	if (!R_RenderThreadRunning())
+	{
+		qglTexParameteri(target, pname, param);
+		return;
+	}
+	R_ImageUploadLock();
+	qglTexParameteriCmd_t * cmd = (qglTexParameteriCmd_t*)R_ImageGetCommand(sizeof(qglTexParameteriCmd_t));
+	cmd->commandId = QGLC_TEXPARAMETERI;
+	cmd->target = target;
+	cmd->pname = pname;
+	cmd->param = param;
+	R_ImageUploadUnlock();
+}
+
+byte * R_qglTexParameteriExecute(byte * data)
+{
+	qglTexParameteriCmd_t * cmd = (qglTexParameteriCmd_t*)data;
+	qglTexParameteri(cmd->target, cmd->pname, cmd->param);
+	return data + sizeof(qglTexParameteriCmd_t);
+}
+
+
+#if 0
+#define MAX_IMAGE_UPLOADS 1024
+#endif
+
+typedef struct {
+	image_t * image;
+	byte * pic;
+	GLenum format;
+	int allowTC;
+} imageupload_t;
+
+#if 0
+typedef struct {
+	int numImages;
+	imageupload_t imageUploads[MAX_IMAGE_UPLOADS];
+} imageuploads_t;
+
+int g_numImageUploadsPeak;
+int g_imageUploadCurrent;
+imageuploads_t g_imageUploads[2];
+extern void * g_imageUploadMutex;
+#endif
+
+extern void R_Upload32( unsigned *data,
+						  GLenum format,
+						  qboolean mipmap,
+						  qboolean picmip,
+						  qboolean isLightmap,
+						  qboolean allowTC,
+						  int *pformat,
+						  word *pUploadWidth, word *pUploadHeight );
+
+static void DoImageUpload( imageupload_t * imageupload )
+{
+	image_t * image = imageupload->image;
+
+	qboolean	isLightmap = qfalse;
+	if (image->imgName[0] == '$')
+	{
+		isLightmap = qtrue;
+	}
+
+#if 0
+	if ( qglActiveTextureARB ) {
+		GL_SelectTexture( 0 );
+	}
+
+	GL_Bind(image);
+
+	R_Upload32( (unsigned *)imageupload->pic,
+							imageupload->format,
+							image->mipmap,
+							image->allowPicmip,
+							isLightmap,
+							imageupload->allowTC,
+							&image->internalFormat,
+							&image->width,
+							&image->height );
+
+	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, image->wrapClampMode );
+	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, image->wrapClampMode );
+
+	qglBindTexture( GL_TEXTURE_2D, 0 );	//jfm: i don't know why this is here, but it breaks lightmaps when there's only 1
+	glState.currenttextures[glState.currenttmu] = 0;	//mark it not bound
+
+	free(imageupload->pic);
+#else
+	R_qglBindTexture(GL_TEXTURE_2D, GL_GetTexNum(image));
+
+	R_Upload32( (unsigned *)imageupload->pic,
+							imageupload->format,
+							image->mipmap,
+							image->allowPicmip,
+							isLightmap,
+							imageupload->allowTC,
+							&image->internalFormat,
+							&image->width,
+							&image->height );
+
+	R_qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, image->wrapClampMode );
+	R_qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, image->wrapClampMode );
+#endif
+}
+
+void RE_ImageUpload(image_t * image, const byte * pic, GLenum format, int allowTC)
+{
+	imageupload_t imageUpload;
+	imageUpload.image = image;
+	imageUpload.format = format;
+	imageUpload.allowTC = allowTC;
+	imageUpload.pic = (byte*)pic;
+	DoImageUpload(&imageUpload);
+#if 0
+	int size = image->width * image->height * 4;
+	byte * dupedPic = (byte*)malloc(size);
+	memcpy(dupedPic, pic, size);
+
+	if (ri.MT_LockMutex(g_imageUploadMutex) != 0)
+	{
+		assert(0);
+		*(int*)0 = 0; // force crash
+	}
+	imageuploads_t * uploads = &g_imageUploads[g_imageUploadCurrent];
+	int i = uploads->numImages++;
+	assert(uploads->numImages <= MAX_IMAGE_UPLOADS);
+	if (uploads->numImages > MAX_IMAGE_UPLOADS)
+	{
+		free(dupedPic);
+		uploads->numImages = MAX_IMAGE_UPLOADS;
+		ri.MT_UnlockMutex(g_imageUploadMutex);
+		return;
+	}
+	uploads->imageUploads[i].image = image;
+	uploads->imageUploads[i].format = format;
+	uploads->imageUploads[i].allowTC = allowTC;
+	uploads->imageUploads[i].pic = dupedPic;
+	R_RenderThreadWake();
+	ri.MT_UnlockMutex(g_imageUploadMutex);
+#endif
+}
+
+void R_UploadImages( void )
+{
+#if 0
+	// try to swap
+	if (ri.MT_LockMutex(g_imageUploadMutex) != 0)
+	{
+		assert(0);
+		*(int*)0 = 0; // force crash
+	}
+	imageuploads_t * uploads = &g_imageUploads[g_imageUploadCurrent];
+	if (!uploads->numImages)
+	{
+		ri.MT_UnlockMutex(g_imageUploadMutex);
+		return;
+	}
+	g_imageUploadCurrent = 1 - g_imageUploadCurrent;
+	assert(g_imageUploads[g_imageUploadCurrent].numImages == 0);
+	ri.MT_UnlockMutex(g_imageUploadMutex);
+
+	if (uploads->numImages > g_numImageUploadsPeak)
+	{
+		g_numImageUploadsPeak = uploads->numImages;
+	}
+
+	for (int i = 0; i < uploads->numImages; i++)
+	{
+		DoImageUpload(uploads->imageUploads + i);
+	}
+
+	OutputDebugStringA(va("Upload Images %d  %d\n", uploads->numImages, g_numImageUploadsPeak));
+	uploads->numImages = 0;
+#else
+	// swap
+	R_ImageUploadLock();
+	qglImageCmdList_t * cmdList = &g_imageCommands[g_imageCommandsCurrent];
+	g_imageCommandsCurrent = 1 - g_imageCommandsCurrent;
+	ri.MT_CondSignal(g_imageUploadCond);
+	R_ImageUploadUnlock();
+
+	if (cmdList->used == 0)
+	{
+		return;
+	}
+
+	qglBindTexture(lastBindTexture.target, lastBindTexture.texture);
+
+	byte * end = cmdList->cmds + cmdList->used;
+	byte * cmd = cmdList->cmds;
+	while (cmd != end)
+	{
+		switch(*(int*)cmd)
+		{
+		case QGLC_BINDTEXTURE:
+			cmd = R_qglBindTextureExecute(cmd);
+			break;
+		case QGLC_TEXIMAGE2D:
+			cmd = R_qglTexImage2DExecute(cmd);
+			break;
+		case QGLC_TEXPARAMETERF:
+			cmd = R_qglTexParameterfExecute(cmd);
+			break;
+		case QGLC_TEXPARAMETERI:
+			cmd = R_qglTexParameteriExecute(cmd);
+			break;
+		}
+	}
+	cmdList->used = 0;
+#endif
 }
 
 /*

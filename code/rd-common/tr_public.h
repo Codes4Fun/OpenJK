@@ -100,6 +100,17 @@ typedef struct {
 
 	// OpenGL-specific
 	void *			(*GL_GetProcAddress)				( const char *name );
+	void			(*GL_MakeCurrent)					( qboolean here );
+
+	void *			(*MT_CreateMutex)					( void );
+	void *			(*MT_CreateCond)					( void );
+	void *			(*MT_CreateThread)					( int (*fn)(void*), const char *name, void *data );
+	int				(*MT_LockMutex)						( void *mutex );
+	int				(*MT_UnlockMutex)					( void *mutex );
+	int				(*MT_CondWait)						( void *cond, void *mutex );
+	int				(*MT_CondWaitTimeout)				( void *cond, void *mutex, uint32_t ms);
+	int				(*MT_CondSignal)					( void *cond );
+
 
 	CMiniHeap *			(*GetG2VertSpaceServer)				( void );
 

@@ -1159,6 +1159,16 @@ void CL_InitRef( void ) {
     rit.WIN_Shutdown = WIN_Shutdown;
     rit.WIN_Present = WIN_Present;
 	rit.GL_GetProcAddress = WIN_GL_GetProcAddress;
+	rit.GL_MakeCurrent = WIN_GL_MakeCurrent;
+
+	rit.MT_CreateMutex = MT_CreateMutex;
+	rit.MT_CreateCond = MT_CreateCond;
+	rit.MT_CreateThread = MT_CreateThread;
+	rit.MT_LockMutex = MT_LockMutex;
+	rit.MT_UnlockMutex = MT_UnlockMutex;
+	rit.MT_CondWait = MT_CondWait;
+	rit.MT_CondWaitTimeout = MT_CondWaitTimeout;
+	rit.MT_CondSignal = MT_CondSignal;
 
 	rit.PD_Load = PD_Load;
 	rit.PD_Store = PD_Store;

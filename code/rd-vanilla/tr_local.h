@@ -1273,6 +1273,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 #define QGL_BACK_RIGHT 3
 #define QGL_OFFSCREEN_LEFT 4
 #define QGL_OFFSCREEN_RIGHT 5
+int		GL_GetTexNum( image_t *image );
 void	GL_Bind( image_t *image );
 void	GL_SetDefaultState (void);
 void	GL_SelectTexture( int unit );
@@ -1845,7 +1846,10 @@ void *R_GetCommandBuffer( int bytes );
 void R_CommandCapture( void );
 void R_CommandSetCapture( void );
 void R_CommandClearCapture( void );
-void RB_ExecuteRenderCommands( const void *data, int capture );
+void RB_ExecuteRenderCommands( const void *data, const void *captured );
+
+void R_UploadImages( void );
+void RE_ImageUpload(image_t * image, const byte * pic, GLenum format, int allowTC);
 
 void R_IssuePendingRenderCommands( void );
 
@@ -1889,3 +1893,69 @@ Ghoul2 Insert End
 
 // tr_surfacesprites
 void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input);
+
+
+#define MAX_IMAGE_COMMANDS (4*1024*1024+44) //(1024*1024*4+4)
+
+#define QGLC_NONE 0
+#define QGLC_BINDTEXTURE 1
+#define QGLC_TEXIMAGE2D 2
+#define QGLC_TEXPARAMETERF 3
+#define QGLC_TEXPARAMETERI 4
+
+typedef struct {
+	byte	cmds[MAX_IMAGE_COMMANDS];
+	int		used;
+} qglImageCmdList_t;
+
+typedef struct {
+	int commandId;
+} qglCmd_t;
+
+typedef struct {
+	int			commandId;
+	uint32_t	target;
+	uint32_t	texture;
+} qglBindTextureCmd_t;
+
+typedef struct {
+	int			commandId;
+	uint32_t	target;
+	int			level;
+	int			internalFormat;
+	uint32_t	width;
+	uint32_t	height;
+	int			border;
+	uint32_t	format;
+	uint32_t	type;
+	byte		data[1];
+} qglTexImage2DCmd_t;
+
+typedef struct {
+	int			commandId;
+	uint32_t	target;
+	uint32_t	pname;
+	float		param;
+} qglTexParameterfCmd_t;
+
+typedef struct {
+	int			commandId;
+	uint32_t	target;
+	uint32_t	pname;
+	int			param;
+} qglTexParameteriCmd_t;
+
+void R_ImageUploadInit();
+void R_ImageUploadLock();
+void R_ImageUploadUnlock();
+void R_qglBindTexture(uint32_t target, uint32_t texture);
+void R_qglTexImage2D( uint32_t target, int level,
+	int internalFormat, uint32_t width, uint32_t height,
+	int border, uint32_t format, uint32_t type, void * data);
+void R_qglTexParameterf( uint32_t target, uint32_t pname, float param);
+void R_qglTexParameteri( uint32_t target, uint32_t pname, int param);
+
+int R_RenderThreadRunning();
+void R_RenderThreadLock();
+void R_RenderThreadUnlock();
+void R_RenderThreadWake();

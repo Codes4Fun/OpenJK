@@ -950,6 +950,126 @@ static bool VRInitialize()
 ** setting variables, checking GL constants, and reporting the gfx system config
 ** to the user.
 */
+void * g_renderThread;
+void * g_renderMutex;
+void * g_renderCond;
+void * g_renderInitCond;
+void * g_renderShutdownCond;
+bool g_renderRunning;
+bool g_renderInit;
+bool g_renderShutdown;
+
+int R_RenderThreadRunning()
+{
+	return g_renderRunning;
+}
+
+void R_RenderThreadLock()
+{
+	if (ri.MT_LockMutex(g_renderMutex) != 0)
+	{
+		assert(0);
+		*(int*)0 = 0; // force crash
+	}
+}
+
+void R_RenderThreadUnlock()
+{
+	ri.MT_UnlockMutex(g_renderMutex);
+}
+
+void R_RenderThreadWake()
+{
+	ri.MT_CondSignal(g_renderCond);
+}
+
+static int OpenGLThread( void * )
+{
+	R_RenderThreadLock();
+	while(1)
+	{
+		while (!g_renderInit)
+		{
+			ri.MT_CondWait(g_renderCond, g_renderMutex);
+		}
+
+		ri.GL_MakeCurrent(qtrue);
+		g_renderInit = false;
+		g_renderRunning = true;
+		ri.MT_CondSignal(g_renderInitCond);
+
+		while (!g_renderShutdown)
+		{
+			R_UploadImages();
+
+			if (!backEndData)
+			{
+				ri.MT_CondWaitTimeout(g_renderCond, g_renderMutex, 1);
+				continue;
+			}
+
+			byte *captured = NULL;
+			if (backEndData->hasCapture)
+			{
+				captured = backEndData->captured;
+			}
+
+			// actually start the commands going
+			// let it start on the new batch
+			renderCommandList_t * cmdList = &backEndData->commands[1 - backEndData->currentCommands];
+			RB_ExecuteRenderCommands( cmdList->cmds, captured );
+
+			ri.MT_CondWaitTimeout(g_renderCond, g_renderMutex, 1);
+		}
+
+		ri.GL_MakeCurrent(qfalse);
+		g_renderShutdown = false;
+		g_renderRunning = false;
+		ri.MT_CondSignal(g_renderShutdownCond);
+	}
+
+	R_RenderThreadUnlock();
+	return 0;
+}
+
+void R_RenderThreadStart( void )
+{
+	if (!g_renderThread)
+	{
+		g_renderThread = ri.MT_CreateThread(OpenGLThread, "RenderThread", NULL);
+	}
+
+	R_RenderThreadLock();
+	assert(!g_renderRunning);
+	ri.GL_MakeCurrent(qfalse);
+	g_renderInit = true;
+	R_RenderThreadWake();
+	while (!g_renderRunning)
+	{
+		ri.MT_CondWait(g_renderInitCond, g_renderMutex);
+	}
+	R_RenderThreadUnlock();
+}
+
+void R_RenderThreadStop ( void )
+{
+	if (!g_renderRunning)
+	{
+		return;
+	}
+	R_RenderThreadLock();
+	assert(g_renderRunning);
+	g_renderShutdown = true;
+	R_RenderThreadWake();
+	while (g_renderRunning)
+	{
+		ri.MT_CondWait(g_renderShutdownCond, g_renderMutex);
+	}
+	R_RenderThreadUnlock();
+
+	ri.GL_MakeCurrent(qtrue);
+}
+
 static void InitOpenGL( void )
 {
 	//
@@ -969,6 +1089,11 @@ static void InitOpenGL( void )
 		memset(&glConfig, 0, sizeof(glConfig));
 
 		window = ri.WIN_Init(&windowDesc, &glConfig);
+
+		g_renderMutex = ri.MT_CreateMutex();
+		g_renderInitCond = ri.MT_CreateCond();
+		g_renderShutdownCond = ri.MT_CreateCond();
+		g_renderCond = ri.MT_CreateCond();
 
 		// get our config strings
 		glConfig.vendor_string = (const char *)qglGetString (GL_VENDOR);
@@ -992,6 +1117,8 @@ static void InitOpenGL( void )
 
 		// initalize framebuffers if we need them
 		InitFramebuffers();
+
+		R_ImageUploadInit();
 
 		R_Splash();	//get something on screen asap
 	}
@@ -2013,7 +2140,12 @@ void R_Init( void ) {
 	R_NoiseInit();
 	R_Register();
 
-	backEndData = (backEndData_t *) R_Hunk_Alloc( sizeof( backEndData_t ), qtrue );
+	//backEndData = (backEndData_t *) R_Hunk_Alloc( sizeof( backEndData_t ), qtrue );
+	if (!backEndData)
+	{
+		backEndData = (backEndData_t *) malloc( sizeof( backEndData_t ) );
+		memset(backEndData, 0, sizeof( backEndData_t ));
+	}
 	R_InitNextFrame();
 
 	const color4ub_t color = {0xff, 0xff, 0xff, 0xff};
@@ -2021,10 +2153,17 @@ void R_Init( void ) {
 		byteAlias_t *ba = (byteAlias_t *)&color;
 		RE_SetLightStyle( i, ba->i );
 	}
+
+	R_RenderThreadStop();
+
 	InitOpenGL();
 
+	ARB_InitGlowShaders();
 	R_InitImages();
 	R_InitShaders();
+
+	R_RenderThreadStart();
+
 	R_InitSkins();
 	R_ModelInit();
 	R_InitWorldEffects();
@@ -2048,6 +2187,8 @@ RE_Shutdown
 */
 extern void R_ShutdownWorldEffects(void);
 void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
+	//R_RenderThreadStop();
+
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_RemoveCommand( commands[i].cmd );
 
@@ -2098,6 +2239,9 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 				SaveGhoul2InfoArray();
 			}
 		}
+		//R_RenderThreadLock();
+		//backEndData = NULL;
+		//R_RenderThreadUnlock();
 	}
 
 	// shut down platform specific OpenGL stuff

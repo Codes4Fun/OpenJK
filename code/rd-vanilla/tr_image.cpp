@@ -554,7 +554,7 @@ Upload32
 
 ===============
 */
-static void Upload32( unsigned *data,
+void R_Upload32( unsigned *data,
 						  GLenum format,
 						  qboolean mipmap,
 						  qboolean picmip,
@@ -695,13 +695,13 @@ static void Upload32( unsigned *data,
 	    // copy or resample data as appropriate for first MIP level
 	    if (!mipmap)
 	    {
-		    qglTexImage2D (GL_TEXTURE_2D, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		    R_qglTexImage2D (GL_TEXTURE_2D, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		    goto done;
 	    }
 
 		R_LightScaleTexture (data, width, height, !mipmap );
 
-	    qglTexImage2D (GL_TEXTURE_2D, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+	    R_qglTexImage2D (GL_TEXTURE_2D, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
 
 	    if (mipmap)
 	    {
@@ -724,7 +724,7 @@ static void Upload32( unsigned *data,
 				    R_BlendOverTexture( (byte *)data, width * height, mipBlendColors[miplevel] );
 			    }
 
-			    qglTexImage2D (GL_TEXTURE_2D, miplevel, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+			    R_qglTexImage2D (GL_TEXTURE_2D, miplevel, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
 		    }
 	    }
 	}
@@ -737,20 +737,20 @@ done:
 
 	if (mipmap)
 	{
-		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+		R_qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+		R_qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
 		if( r_ext_texture_filter_anisotropic->integer > 1 && glConfig.maxTextureFilterAnisotropy > 0 )
 		{
-			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
+			R_qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
 		}
 	}
 	else
 	{
-		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		R_qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		R_qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	}
 
-	GL_CheckErrors();
+	//GL_CheckErrors();
 }
 
 class CStringComparator
@@ -983,7 +983,6 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 					   GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode)
 {
 	image_t		*image;
-	qboolean	isLightmap = qfalse;
 
 	if (strlen(name) >= MAX_QPATH ) {
 		Com_Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
@@ -991,11 +990,6 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 
 	if(glConfig.clampToEdgeAvailable && glWrapClampMode == GL_CLAMP) {
 		glWrapClampMode = GL_CLAMP_TO_EDGE;
-	}
-
-	if (name[0] == '$')
-	{
-		isLightmap = qtrue;
 	}
 
 	if ( (width&(width-1)) || (height&(height-1)) )
@@ -1027,26 +1021,7 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
 
-	if ( qglActiveTextureARB ) {
-		GL_SelectTexture( 0 );
-	}
-
-	GL_Bind(image);
-
-	Upload32( (unsigned *)pic,	format,
-								image->mipmap,
-								allowPicmip,
-								isLightmap,
-								allowTC,
-								&image->internalFormat,
-								&image->width,
-								&image->height );
-
-	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, glWrapClampMode );
-	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, glWrapClampMode );
-
-	qglBindTexture( GL_TEXTURE_2D, 0 );	//jfm: i don't know why this is here, but it breaks lightmaps when there's only 1
-	glState.currenttextures[glState.currenttmu] = 0;	//mark it not bound
+	RE_ImageUpload(image, pic, format, allowTC);
 
 	const char *psNewName = GenerateImageMappingName(name);
 	Q_strncpyz(image->imgName, psNewName, sizeof(image->imgName));

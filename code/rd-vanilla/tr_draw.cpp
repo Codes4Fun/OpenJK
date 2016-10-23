@@ -53,6 +53,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 		Com_Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
 	}
 
+#if 0
 	GL_Bind( tr.scratchImage[iClient] );
 
 	// if the scratchImage isn't in the format we want, specify it as a new texture...
@@ -107,6 +108,14 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 			}
 	#endif
 		}
+	}
+#endif
+
+	if ( cols != tr.scratchImage[iClient]->width || rows != tr.scratchImage[iClient]->height || bDirty)
+	{
+		tr.scratchImage[iClient]->width = cols;
+		tr.scratchImage[iClient]->height = rows;
+		RE_ImageUpload(tr.scratchImage[iClient], data, GL_RGBA, 0);
 	}
 
 	RE_StretchScratch (x, y, w, h, cols, rows, iClient);

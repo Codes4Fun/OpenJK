@@ -176,6 +176,14 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 		R_PerformanceCounters();
 	}
 
+	R_RenderThreadLock();
+
+	// swap command buffers
+	backEndData->currentCommands = 1 - backEndData->currentCommands;
+	// clear new command buffer
+	backEndData->commands[backEndData->currentCommands].used = 0;
+
+#if 0
 	byte *captured = NULL;
 	if (backEndData->hasCapture)
 	{
@@ -187,17 +195,16 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 		// let it start on the new batch
 		RB_ExecuteRenderCommands( cmdList->cmds, captured );
 	}
-
-	// swap command buffers
-	backEndData->currentCommands = 1 - backEndData->currentCommands;
-	// clear new command buffer
-	backEndData->commands[backEndData->currentCommands].used = 0;
+#endif
 
 	if (backEndData->capture)
 	{
 		backEndData->capture = qfalse;
 		R_CommandCapture();
 	}
+
+	R_RenderThreadWake();
+	R_RenderThreadUnlock();
 }
 
 
