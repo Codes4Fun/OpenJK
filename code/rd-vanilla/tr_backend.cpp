@@ -771,8 +771,10 @@ static void VRUpdate()
 
 	VRCreateProjectionMatrix(vrUIProjectionLeftMatrix, true, 0.1f, 512);
 	VRCreateProjectionMatrix(vrUIProjectionRightMatrix, false, 0.1f, 512);
-	VRCreateViewMatrix(vrUIViewLeftMatrix,true,3.2f);
-	VRCreateViewMatrix(vrUIViewRightMatrix,false,3.2f);
+	float ui_stereoSeparation = 3.2f;
+	ui_stereoSeparation *= r_stereoSeparation->value / 3.f;
+	VRCreateViewMatrix(vrUIViewLeftMatrix,true,ui_stereoSeparation);
+	VRCreateViewMatrix(vrUIViewRightMatrix,false,ui_stereoSeparation);
 
 	VRCreateViewMatrix(vrFarViewMatrix,true,0);
 	VRCreateViewMatrix(vrViewLeftMatrix,true,r_stereoSeparation->value);
