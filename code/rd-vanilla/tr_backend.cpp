@@ -1069,7 +1069,11 @@ void SetViewportAndScissor( void ) {
 		GL_Viewport(backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
 			backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight);
 
-		VRCreateProjectionMatrix(vrProjectionMatrix, backEnd.stereoLeft == qtrue, r_znear->value, backEnd.viewParms.zFar);
+		float eyeScaleR = r_stereoSeparation->value / hmdEyeRight[12];
+		float zOffset = hmdHeadMatrix[14] * eyeScaleR;
+		if( zOffset < 0 ) zOffset = 0;
+
+		VRCreateProjectionMatrix(vrProjectionMatrix, backEnd.stereoLeft == qtrue, r_znear->value + zOffset, backEnd.viewParms.zFar + zOffset);
 		qglMatrixMode(GL_PROJECTION);
 		qglLoadMatrixf( vrProjectionMatrix );
 
